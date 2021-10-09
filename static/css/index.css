@@ -1,0 +1,63 @@
+* {
+    box-sizing: border-box;
+  }
+
+  .scrollit {
+    overflow:scroll;
+    height:400px;
+}
+
+  .graph {
+    margin: auto;
+    width: 70%;
+    display: block;
+    padding: 10px;
+    border: 1px solid white;
+}
+
+  /* Create two equal columns that floats next to each other */
+  .column {
+    float: left;
+    width: 46%;
+    padding: 10px;
+    height: 400px;
+    /* Should be removed. Only for demonstration */
+  }
+
+  .column2 {
+    float: left;
+    width: 2%;
+    padding: 10px;
+    height: 400px;
+    /* Should be removed. Only for demonstration */
+  }
+
+  .column3 {
+    float: left;
+    width: 5%;
+    padding: 10px;
+    height: 400px;
+    /* Should be removed. Only for demonstration */
+  }
+
+  /* Clear floats after the columns */
+  .row:after {
+    content: "";
+    display: table;
+    clear: both;
+  }
+
+  .container {
+    height: 100px;
+    position: relative;
+    ;
+  }
+
+  .vertical-center {
+    margin: 0;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    -ms-transform: translate(-50%, -50%);
+    transform: translate(-50%, -50%);
+  }

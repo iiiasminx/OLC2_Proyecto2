@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>[OLC]Proyecto2</title>
+
+  <link rel="stylesheet" href="https://bootswatch.com/4/darkly/bootstrap.min.css">
+  <link rel="stylesheet" href="{{url_for('static', filename='css/index.css')}}">
+
+  <!--JQUERY-->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="{{url_for('static', filename='jquery-3.6.0.min.js')}}"></script>
+
+  <script src="{{url_for('static', filename='index.js')}}"></script>
+
+  <!--CODEMIRROR-->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.3/codemirror.min.js"
+    integrity="sha512-hGVnilhYD74EGnPbzyvje74/Urjrg5LSNGx0ARG1Ucqyiaz+lFvtsXk/1jCwT9/giXP0qoXSlVDjxNxjLvmqAw=="
+    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.3/mode/julia/julia.min.js"
+    integrity="sha512-X4Vk2O2mdGy5yigDfJ6ZQWDApCtWXMvR5VT1eyzivvURPquYWFqSBXmmQCbhbfpFtrSgcSBkN0CS5MeH4qfSbg=="
+    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.3/codemirror.min.css"
+    integrity="sha512-6sALqOPMrNSc+1p5xOhPwGIzs6kIlST+9oGWlI4Wwcbj1saaX9J3uzO3Vub016dmHV7hM+bMi/rfXLiF5DNIZg=="
+    crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.3/theme/darcula.min.css"
+    integrity="sha512-kqCOYFDdyQF4JM8RddA6rMBi9oaLdR0aEACdB95Xl1EgaBhaXMIe8T4uxmPitfq4qRmHqo+nBU2d1l+M4zUx1g=="
+    crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+  <!--CHART JS-->
+  <script src="//d3js.org/d3.v5.min.js"></script>
+  <script src="https://unpkg.com/@hpcc-js/wasm@0.3.11/dist/index.min.js"></script>
+  <script src="https://unpkg.com/d3-graphviz@3.0.5/build/d3-graphviz.js"></script>
+
+</head>
+
+
+<body>
+
+
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="#">OLC2 Proyecto2</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarColor01"
+        aria-controls="navbarColor01" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="navbarColor01">
+        <ul class="navbar-nav me-auto">
+          <li class="nav-item">
+            <a class="nav-link" href="home">Home</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="about">About me!</a>
+          </li>
+        </ul>
+
+      </div>
+    </div>
+  </nav>
+
+  <p></p>
+  <p></p>
+  <br>
+  <form action="/submit" method="POST">
+    <h2>&emsp;Intérprete
+      <input id="done" type="submit" value="Analizar" class="btn btn-primary" />
+    </h2>
+    <br>
+    <div class="row form-group">
+      <div class="column2">
+      </div>
+      <div class="column" style="background-color:#aaa;">
+        <h2>Entrada</h2>
+        <textarea type="text" class="form-control" id="entrada" name="entrada"></textarea>
+      </div>
+      <div class="column2">
+      </div>
+      <div class="column" style="background-color:#bbb;">
+        <h2>Salida</h2>
+        <textarea type="text" class="form-control" disabled id="salida"></textarea>
+      </div>
+    </div>
+  </form>
+  </br></br>
+  <h2>Reportes</h2>
+  </br></br>
+  <div class="row form-group">
+    <div class="column2">
+    </div>
+    <div class="column" style="background-color:#454547;">
+      <h2>AST DOT</h2>
+      <textarea type="text" class="form-control" id="dott" disabled name="dott"></textarea>
+    </div>
+    <div class="column2">
+    </div>
+    <div class="column" style="background-color:#4f4f52;">
+      <h2>AST</h2>
+      <div id="graph" style="text-align: center;"></div>
+    </div>
+  </div>
+
+  </br></br>
+
+  <div class="row form-group">
+    <div class="column2">
+    </div>
+    <div class="column">
+
+      <form>
+        <h2>&emsp;Tabla de Símbolos</h2>
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th scope="col">Nombre</th>
+              <th scope="col">Tipo</th>
+              <th scope="col">Valor</th>
+              <th scope="col">Ámbito</th>
+              <th scope="col">Nota</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for simbolo in simbolos %}
+
+            <tr>
+              <td>{{simbolo.nombre}}</td>
+              <td>{{simbolo.tipo}}</td>
+              <td>{{simbolo.valor}}</td>
+              <td>{{simbolo.ambito}}</td>
+              <td>{{simbolo.nota}}</td>
+            </tr>
+
+            {% endfor %}
+
+          </tbody>
+        </table>
+      </form>
+
+
+    </div>
+    <div class="column2">
+    </div>
+    <div class="column">
+
+
+      <form>
+        <h2>&emsp;Reporte de Errores</h2>
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th scope="col">No.</th>
+              <th scope="col">Descripción</th>
+              <th scope="col">Fila</th>
+              <th scope="col">Columna</th>
+              <th scope="col">Hora</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {% for error in erroreslex %}
+
+            <tr>
+              <td>{{error.contador}}</td>
+              <td>{{error.descripcion}}</td>
+              <td>{{error.fila}}</td>
+              <td>{{error.columna}}</td>
+              <td>{{error.fecha}}</td>
+            </tr>
+
+            {% endfor %}
+            {% for error in listaErrores %}
+
+            <tr>
+              <td>{{error.contador}}</td>
+              <td>{{error.descripcion}}</td>
+              <td>{{error.fila}}</td>
+              <td>{{error.columna}}</td>
+              <td>{{error.fecha}}</td>
+            </tr>
+
+            {% endfor %}
+            {% for error in semanticos %}
+
+            <tr>
+              <td>{{error.contador}}</td>
+              <td>{{error.descripcion}}</td>
+              <td>{{error.fila}}</td>
+              <td>{{error.columna}}</td>
+              <td>{{error.fecha}}</td>
+            </tr>
+
+            {% endfor %}
+          </tbody>
+
+        </table>
+
+      </form>
+    </div>
+  </div>
+
+  </br></br>
+  </br></br>
+  </br></br></br>
+</br></br>
+</br></br>
+</br></br>
+</br></br></br>
+</br></br></br></br></br>
+</br></br>
+
+  <div class="row form-group">
+    <div class="column2">
+    </div>
+    <div class="column">
+
+      <form>
+        <h2>&emsp;Bitácora de Cambios</h2>
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th scope="col">Nombre</th>
+              <th scope="col">Tipo</th>
+              <th scope="col">Valor</th>
+              <th scope="col">Ámbito</th>
+              <th scope="col">Nota</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for simbolo in simbolos2 %}
+
+            <tr>
+              <td>{{simbolo.nombre}}</td>
+              <td>{{simbolo.tipo}}</td>
+              <td>{{simbolo.valor}}</td>
+              <td>{{simbolo.ambito}}</td>
+              <td>{{simbolo.nota}}</td>
+            </tr>
+
+            {% endfor %}
+
+          </tbody>
+        </table>
+      </form>
+    </div>
+    <div class="column2">
+    </div>
+    <div class="column">
+    </div>
+  </div>
+
+  <pre><p id="txtsalida">{{ mesg }}</p></pre>
+  <pre><p id="txtentrada" >{{ entrada }}</p></pre>
+  <pre><p id="txterrores" >{{ grafo }}</p></pre>
+
+
+</body>
+
+<script>
+
+  let grafo = document.getElementById("txterrores").innerHTML;
+  let nuevo = grafo.replace(/&gt;/g, '>');
+  console.log(nuevo);
+
+  d3.select("#graph").graphviz()
+    .renderDot(nuevo);
+
+</script>
+
+</html>
