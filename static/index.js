@@ -26,24 +26,12 @@ $(document).ready(function () {
   });
   editorSalida.setSize(null, 300);
 
-  var editordott = CodeMirror.fromTextArea(
-    document.getElementById('dott'), {
-    mode: "julia",
-    theme: "darcula",
-    lineNumbers: true,
-    lineWrapping: true,
-    readOnly: true
-  });
-  editordott.setSize(null, 300);
-
   //labels que no se pueden ver
   document.getElementById("txtsalida").style.display = 'none';
   document.getElementById("txtentrada").style.display = 'none';
-  document.getElementById("txterrores").style.display = 'none';
 
   if (window.location.href.indexOf("submit") > -1) {
-    //editorSalida.getDoc().setValue('var msg = "Hi";');
-
+    
     var loquesale = document.getElementById("txtsalida")
     var textosalida = loquesale.textContent;
     var loqueentra = document.getElementById("txtentrada")
@@ -51,10 +39,6 @@ $(document).ready(function () {
 
     editorSalida.getDoc().setValue(textosalida);
     editorEntrada.getDoc().setValue(textoentrada);
-
-    var grafo = document.getElementById("txterrores")
-    var txtgrafo = grafo.textContent;
-    editordott.getDoc().setValue(txtgrafo);
 
   }
 });

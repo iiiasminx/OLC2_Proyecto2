@@ -1,13 +1,36 @@
 from flask import Flask, render_template, request, jsonify
 import json
 
-from gramatica import fighting
-from sintactico import fighting2
-from interprete import fightingfinal
-from cst import NodoSimbolo, NodoError, Exporte #Falta el AST cuando entienda que pex xdxd
+from a_lexico import fighting
+from a_sintactico import fighting2
+from compilador  import compilando
+#from interprete import fightingfinal
 
 app = Flask(__name__, static_url_path='')
 
+# FUNCIONES EXTRA
+def compilado(codigo):
+
+    paquete = compilando(codigo)
+    print('errores:')
+    for x in range(len(paquete.tabla_errores)):
+        print(paquete.tabla_errores[x].descripcion)
+    #ahora si viendo que pex
+    return paquete
+
+
+def optim1(codigo):
+    print('optim1')
+    txt = 'optim1'
+    return txt
+
+def optim2(codigo):
+    print('optim2')
+    txt = 'optim2'
+    return txt
+
+
+# FUNCIONES DE APP
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -24,29 +47,21 @@ def about():
 def reportes():
     return render_template('reportes.html')
 
+
 @app.route('/submit', methods=['POST'])
 def submit():
     if request.method == 'POST':
         entrada = request.form['entrada']
         print('Este es ->' + entrada)
-        erroreslex = fighting(entrada) #lexico
 
-        #todo lo que viene del analizador
-        importe =  fightingfinal(entrada) 
+        if 'Compilar' in request.form:
+            paquete = compilado(entrada)
+        elif 'Optimizar1' in request.form:
+            paquete = optim1(entrada)
+        elif 'Optimizar2' in request.form:
+            paquete = optim2(entrada)
 
-        # codigo interpretado
-        mesg = importe.interpretacion
-
-        #lista de errores
-        listaErrores = importe.tabla_errores
-        json_string2 = json.dumps([ob.__dict__ for ob in listaErrores])
-        #grafo en dot
-        grafo = importe.grafo
-        semanticos = importe.listasemanticos
-        simbolos2 = importe.tabla_simbolos
-        simbolos = importe.listasegundos
-
-        return render_template('index.html', simbolos2=simbolos2, simbolos= simbolos, semanticos=semanticos, mesg=mesg, entrada=entrada, erroreslex = erroreslex, listaErrores=listaErrores, grafo = grafo)
+        return render_template('index.html', salida=paquete.traduccion, entrada=entrada, errores=paquete.tabla_errores, lexicos=paquete.errores_lexicos)
 
 @app.route('/submit', methods=['GET'])
 def submit2():
@@ -56,3 +71,7 @@ def submit2():
 if __name__ == '__main__':
     app.debug = True
     app.run()
+
+
+
+

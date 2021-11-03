@@ -3,11 +3,7 @@
 # -----------------------------------------------------------------------------------------------------
 
 import ply.lex as lex
-import re
-import codecs
-import os
-import sys
-from cst import NodoError
+from objetos import NodoError
 
 contaerrores = 0
 listaErrores = []
@@ -239,6 +235,4 @@ def fighting(texto):
 
 
 #EXTRAS
-# t_array = r'' para sintáctico
-
 #fighting('println if else while Ana MariA dEl MoNtE true')

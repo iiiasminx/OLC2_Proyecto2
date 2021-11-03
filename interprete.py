@@ -1,10 +1,10 @@
 # importo todo de todos lados
 from sys import exc_info
-from gramatica import fighting, tokens
-import cst as cst
+from a_lexico import fighting, tokens
+import objetos as cst
 from operaciones import *
-from semantico  import *
-from sintactico import * 
+from instrucciones  import *
+from a_sintactico import * 
 import math
 
 lista_simbolos = [] # acá van todos los valores que se hayan declarado
@@ -19,6 +19,11 @@ extra = ""
 
 
 def fightingfinal(texto):
+    global textoimpresion
+    textoimpresion = """Learn Python
+    Programming"""
+
+
     exportef = fighting2(texto)
     global arbol 
     arbol = exportef.arbol
@@ -28,8 +33,7 @@ def fightingfinal(texto):
     listasemanticos = []
     global contaerrores
     contaerrores = 0
-    global textoimpresion
-    textoimpresion = "Lo que imprimo va acá :3 ---------------------\n"
+    
     global ts_global
     ts_global.simbolos.clear()
     pilaentornos.clear()
