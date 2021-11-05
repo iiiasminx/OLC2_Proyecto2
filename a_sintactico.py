@@ -315,6 +315,7 @@ def p_asignaciones4(t):
     '''ASIGNACION : NOMBREALGO igual nothing '''
     t[0] = Asignacion(t[1], OPNothing())
 
+#ver este
 def p_asignaciones5(t):
     '''ASIGNACION : NOMBREALGO  '''
     t[0] = t[1]

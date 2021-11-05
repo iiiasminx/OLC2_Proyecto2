@@ -61,7 +61,9 @@ def submit():
         elif 'Optimizar2' in request.form:
             paquete = optim2(entrada)
 
-        return render_template('index.html', salida=paquete.traduccion, entrada=entrada, errores=paquete.tabla_errores, lexicos=paquete.errores_lexicos)
+        return render_template('index.html', salida=paquete.traduccion, entrada=entrada, 
+        errores=paquete.tabla_errores, lexicos=paquete.errores_lexicos, 
+        simbolos=paquete.tabla_simbolos, semanticos= paquete.listasemanticos)
 
 @app.route('/submit', methods=['GET'])
 def submit2():

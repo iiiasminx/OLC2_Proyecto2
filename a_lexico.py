@@ -165,6 +165,9 @@ def t_id(t):
         #t.value = t.value.lower()
     return t
     
+def t_comment2(t):
+    r'(\#)(.)*(\n)'
+    pass
 
 def t_comment1(t):
     r'(\#=).*\n*.*(=\#)'
@@ -178,10 +181,6 @@ def t_salto(t):
     r'\r*\n+'
     t.lineno += t.value.count("\n")
     #return t
-
-def t_comment2(t):
-    r'(\#)(.)*(\n)'
-    pass
 
 def t_flotante(t):
     r'([0-9]+\.[0-9]+)'

@@ -44,11 +44,12 @@ class NodoSimbolo:
     columna = 'nc'
     funcinstrucciones = []
     funcparams = []
-    def __init__(self, nombre, tipo, ambito, valor):
-        self.nombre = nombre
-        self.tipo = tipo        # int (?)
-        self.ambito = ambito    #global
-        self.valor = valor
+    def __init__(self, nombre, tipo, ambito, posicion):
+        self.nombre = nombre    # juanito, eve, shion
+        self.tipo = tipo        # int, funcion, bool, etc
+        self.ambito = ambito    #global, local
+        #self.valor = valor      #45, 55, "wakateru" 
+        self.posicion = posicion #1,2,3 .. va en orden
 
 
 class TablaSimbolos:

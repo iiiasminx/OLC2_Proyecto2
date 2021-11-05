@@ -25,12 +25,13 @@ class Declaracion(Instruccion): #nombre, scope =0
 
 class Asignacion(Instruccion): # nombre, valor
     myid = 4
+    tipo = ""
     def __init__(self,  nombre, valor) :
         self.nombre = nombre
         self.valor = valor
 
 class AsignacionTipada(Instruccion): #nombre, valor, tipo
-    def __init__(self,  nombre, valor, tipo) :
+    def __init__(self,  nombre, valor, tipo = "") :
         self.nombre = nombre
         self.valor = valor
         self.tipo = tipo

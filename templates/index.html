@@ -104,9 +104,8 @@
             <tr>
               <th scope="col">Nombre</th>
               <th scope="col">Tipo</th>
-              <th scope="col">Valor</th>
               <th scope="col">Ámbito</th>
-              <th scope="col">Nota</th>
+              <th scope="col">Posición</th>
             </tr>
           </thead>
           <tbody>
@@ -115,9 +114,8 @@
             <tr>
               <td>{{simbolo.nombre}}</td>
               <td>{{simbolo.tipo}}</td>
-              <td>{{simbolo.valor}}</td>
               <td>{{simbolo.ambito}}</td>
-              <td>{{simbolo.nota}}</td>
+              <td>{{simbolo.posicion}}</td>
             </tr>
 
             {% endfor %}
@@ -259,6 +257,16 @@
 
             {% endfor %}
             {% for error in errores %}
+
+            <tr>
+              <td>{{error.descripcion}}</td>
+              <td>{{error.fila}}</td>
+              <td>{{error.columna}}</td>
+              <td>{{error.fecha}}</td>
+            </tr>
+
+            {% endfor %}
+            {% for error in semanticos %}
 
             <tr>
               <td>{{error.descripcion}}</td>
