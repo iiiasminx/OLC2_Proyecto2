@@ -106,6 +106,7 @@
               <th scope="col">Tipo</th>
               <th scope="col">Ámbito</th>
               <th scope="col">Posición</th>
+              <th scope="col">Nota</th>
             </tr>
           </thead>
           <tbody>
@@ -116,6 +117,7 @@
               <td>{{simbolo.tipo}}</td>
               <td>{{simbolo.ambito}}</td>
               <td>{{simbolo.posicion}}</td>
+              <td>{{simbolo.nota}}</td>
             </tr>
 
             {% endfor %}
@@ -145,39 +147,6 @@
           </thead>
 
           <tbody>
-            {% for error in erroreslex %}
-
-            <tr>
-              <td>{{error.contador}}</td>
-              <td>{{error.descripcion}}</td>
-              <td>{{error.fila}}</td>
-              <td>{{error.columna}}</td>
-              <td>{{error.fecha}}</td>
-            </tr>
-
-            {% endfor %}
-            {% for error in listaErrores %}
-
-            <tr>
-              <td>{{error.contador}}</td>
-              <td>{{error.descripcion}}</td>
-              <td>{{error.fila}}</td>
-              <td>{{error.columna}}</td>
-              <td>{{error.fecha}}</td>
-            </tr>
-
-            {% endfor %}
-            {% for error in semanticos %}
-
-            <tr>
-              <td>{{error.contador}}</td>
-              <td>{{error.descripcion}}</td>
-              <td>{{error.fila}}</td>
-              <td>{{error.columna}}</td>
-              <td>{{error.fecha}}</td>
-            </tr>
-
-            {% endfor %}
           </tbody>
 
         </table>

@@ -51,6 +51,10 @@ class NodoSimbolo:
         #self.valor = valor      #45, 55, "wakateru" 
         self.posicion = posicion #1,2,3 .. va en orden
 
+class objVar:
+    def __init__(self, nombre, tipo = "Numeric"):
+        self.nombre = nombre
+        self.tipo = tipo
 
 class TablaSimbolos:
 
@@ -70,6 +74,15 @@ class TablaSimbolos:
             error1 = NodoErrorSemantico(desc)
             return error1
         return self.simbolos[nombre]
+
+    def obtenerTipo(self, posicion) : #aca devuelvo el tipo del coso que existe
+        for key in self.simbolos:
+            if self.simbolos[key].posicion == posicion:
+                #print("found - ", self.simbolos[key].tipo)
+                return self.simbolos[key].tipo     
+
+        return ''        
+            
 
     def actualizar(self, simbolo) :
         if not simbolo.nombre in self.simbolos :

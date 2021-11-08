@@ -1,5 +1,5 @@
 # importo todo de todos lados
-from sys import exc_info
+from sys import exc_info, getsizeof
 from a_lexico import fighting, tokens
 import objetos as cst
 from operaciones import *
@@ -36,8 +36,15 @@ fincomando = ";\n"
 smas = " + "
 smenos = " - "
 
+#funcionusada 0 binaria, 1 strings, 2 bools, 3 nothing
+funcionusada = 0
+
 #funciones extra
 yapotencia = False
+yaconcatstring = False
+yaprintstring = False
+usandovars = 0 # las vars de la instruccion
+contavars = 0   #las vars del todo
 
 def compilando(texto):
     # seteando todo como debe ser :v
@@ -64,7 +71,7 @@ def compilando(texto):
     tradfunciones = ""
 
     traduccion = """package main\nimport ("fmt")\n"""
-    traduccion += "var stack [10000]float64\nvar heap [100000]float64\n"
+    traduccion += "var stack [300000]float64\nvar heap [300000]float64\n"
     traduccion += "var P, H float64\n"
 
     # probando lexico
@@ -114,6 +121,8 @@ def procesarInstrucciones(ast, tablaSimbolos : cst.TablaSimbolos):
         contador += 1
         global contabucle
         contabucle = 0
+        global usandovars
+        usandovars = 0
 
         #OPERACIONES
         if extra != "" : return
@@ -123,49 +132,188 @@ def procesarInstrucciones(ast, tablaSimbolos : cst.TablaSimbolos):
         elif isinstance(instruccion, Declaracion): intDeclaracion(instruccion, tablaSimbolos)
         elif isinstance(instruccion, Scope): intScope(instruccion, tablaSimbolos)
 
-
 # -------------------------------------------------------------------------
 # IMPRESION ---------------------------------------------------------------
 # -------------------------------------------------------------------------
-
+# region impresion -- revisada
 def intImpresion(instr, tablaSimbolos: cst.TablaSimbolos):
     print('impresion')
     aux = ""
+    global funcionusada
     for instruccion in instr.texto:
         # tal vez le tenga que poner un if al res, pero una crisis a la vez xd
-        res = resolverNumerica(instruccion, tablaSimbolos)
-        print('RESPUESTA: ', res)
-        var = verificarT(res)
-        txt = "\"%d\", int(" + var  + ")"
-        if "." in str(res) or "t" in str(res): 
-            txt = "\"%f\", " + var 
-        aux += "fmt.Printf(" + txt + ");\n"   
+        funcionusada = 0
 
-    #aux += "fmt.Printf(\"%c\", 10);\n"
-    meteraTraduccion(aux)    
+        res = resolverNumerica(instruccion, tablaSimbolos)
+        global usandovars
+        global contavars
+
+        if funcionusada == 0: #numerica
+            var = verificarT(res)
+            txt = "\"%d\", int(" + var  + ")"
+            if "." in str(res) or "t" in str(res): 
+                txt = "\"%f\", " + var 
+            aux += "fmt.Printf(" + txt + ");\n" 
+        elif funcionusada == 1: #strings
+            var = verificarT(res)
+
+            global yaprintstring
+            if not yaprintstring:
+                yaprintstring = True
+
+                temp1 = crearTemporal()
+                temp2 = crearTemporal()
+                temp3 = crearTemporal()
+
+                salto1 = crearSalto()
+                salto2 = crearSalto()
+                y = ""
+
+                y += temp1 + siwal+ getP("+1")
+                y += temp2 + siwal + getStack(temp1) + fincomando  #pos en h del str temp               
+                y += iniciarSalto(salto1) 
+                y += temp3 + siwal + getHeap(temp2) + fincomando
+                y += crearIf(temp3 + " == -1", salto2)
+                y += "fmt.Printf(\"%c\", int(" + temp3 +"))" + fincomando
+                y += tempmasmas(temp2)
+                y += iniciarGoto(salto1)
+                y += iniciarSalto(salto2)
+                y += "return" + fincomando
+
+                meterfuncion("imprimir", y)
+
+
+            temp5 = crearTemporal()
+            temp6 = crearTemporal()
+            
+            aux += temp5 + siwal + getP("+" + str(contavars))
+            aux += tempmasmas(temp5)
+            aux += getStack(temp5) + siwal + var + fincomando
+            aux += aumentarP(contavars)
+            aux += "imprimir()" + fincomando
+            aux += temp6 + siwal + getStack("P") + fincomando
+            aux += disminuirP(contavars)
+
+        elif funcionusada == 2: #bools
+            var = verificarT(res)
+
+            if usandovars:
+                strue = crearSalto()
+                sfalse = crearSalto()
+                sfinal = crearSalto()
+
+                aux += crearIf(var + " == 1", strue)
+                aux += iniciarGoto(sfalse)
+                aux += iniciarSalto(strue)
+                aux += meterPalabra("true")
+                aux += iniciarGoto(sfinal)
+                aux += iniciarSalto(sfalse)
+                aux += meterPalabra("false")
+                aux += iniciarSalto(sfinal)
+            else:
+                if 'alse' in var or 'alse' in str(res):
+                    aux += meterPalabra('False')
+                else:
+                    aux += meterPalabra('True')
+        elif funcionusada == 3: #nothing
+            aux += meterPalabra('nil')
+
+        usandovars = 0
+           
+    aux += "fmt.Printf(\"%c\", 10);\n"
+    meteraTraduccion(aux)     
 
 def intImpresionLN(instr, tablaSimbolos : cst.TablaSimbolos):
     print('impresionLN')
     aux = ""
+    global funcionusada
     for instruccion in instr.texto:
         # tal vez le tenga que poner un if al res, pero una crisis a la vez xd
-        aux += "fmt.Printf(\"%c\", 10);\n"
+        funcionusada = 0
 
         res = resolverNumerica(instruccion, tablaSimbolos)
-        print('RESPUESTA: ', res)
-        var = verificarT(res)
-        txt = "\"%d\", int(" + var  + ")"
-        if "." in str(res) or "t" in str(res): 
-            txt = "\"%f\", " + var 
-        aux += "fmt.Printf(" + txt + ");\n" 
+        global usandovars
+        print('USANDOVARS: ', usandovars, ' CONTAVARS -> ', contavars)
 
-        aux += "fmt.Printf(\"%c\", 10);\n"   
+        if funcionusada == 0: #numerica
+            var = verificarT(res)
+            txt = "\"%d\", int(" + var  + ")"
+            if "." in str(res) or "t" in str(res): 
+                txt = "\"%f\", " + var 
+            aux += "fmt.Printf(" + txt + ");\n" 
+        elif funcionusada == 1: #strings
+            var = verificarT(res)
 
+            global yaprintstring
+            if not yaprintstring:
+                yaprintstring = True
+
+                temp1 = crearTemporal()
+                temp2 = crearTemporal()
+                temp3 = crearTemporal()
+
+                salto1 = crearSalto()
+                salto2 = crearSalto()
+                y = ""
+
+                y += temp1 + siwal+ getP("+1")
+                y += temp2 + siwal + getStack(temp1) + fincomando  #pos en h del str temp               
+                y += iniciarSalto(salto1) 
+                y += temp3 + siwal + getHeap(temp2) + fincomando
+                y += crearIf(temp3 + " == -1", salto2)
+                y += "fmt.Printf(\"%c\", int(" + temp3 +"))" + fincomando
+                y += tempmasmas(temp2)
+                y += iniciarGoto(salto1)
+                y += iniciarSalto(salto2)
+                y += "return" + fincomando
+
+                meterfuncion("imprimir", y)
+
+
+            temp5 = crearTemporal()
+            temp6 = crearTemporal()
+            
+            aux += temp5 + siwal + getP("+" + str(contavars))
+            aux += tempmasmas(temp5)
+            aux += getStack(temp5) + siwal + var + fincomando
+            aux += aumentarP(contavars)
+            aux += "imprimir()" + fincomando
+            aux += temp6 + siwal + getStack("P") + fincomando
+            aux += disminuirP(contavars)
+        elif funcionusada == 2: #bools
+            var = verificarT(res)
+
+            if usandovars:
+                strue = crearSalto()
+                sfalse = crearSalto()
+                sfinal = crearSalto()
+
+                aux += crearIf(var + " == 1", strue)
+                aux += iniciarGoto(sfalse)
+                aux += iniciarSalto(strue)
+                aux += meterPalabra("true")
+                aux += iniciarGoto(sfinal)
+                aux += iniciarSalto(sfalse)
+                aux += meterPalabra("false")
+                aux += iniciarSalto(sfinal)
+            else:
+                if 'alse' in var or 'alse' in str(res):
+                    aux += meterPalabra('False')
+                else:
+                    aux += meterPalabra('True')
+        elif funcionusada == 3: #nothing
+            aux += meterPalabra('nil')
+
+        usandovars = 0
+           
+    aux += "fmt.Printf(\"%c\", 10)" + fincomando
     meteraTraduccion(aux)   
+# endregion
 
 # ------------------------------------------------------------------------- 
 # DECLARACION -------------------------------------------------------------
 # -------------------------------------------------------------------------
+# region declaracion -- revisada
 
 def intDeclaracion(instr:Asignacion, tablaSimbolos : cst.TablaSimbolos):
     return ""
@@ -179,15 +327,76 @@ def intScope(instr: Scope, tablaSimbolos : cst.TablaSimbolos):
 
     asignacion = instr.asignacion
     valor = resolverNumerica(asignacion.valor, tablaSimbolos)
+    global funcionusada
+    
     aux = siExiste(asignacion.nombre[0].id, tablaSimbolos)
-    tipo = tipoVariable(valor)
+
+    tipo = "Undefined"
+    if funcionusada == 0:
+        tipo = "Numeric"
+    elif funcionusada == 1:
+        tipo = "String"
+    elif funcionusada == 2:
+        tipo = "Bool"
+    elif funcionusada == 3:
+        tipo = "Nil"
+    
+    # si es tipada
     if asignacion.tipo != "":
         tipo = asignacion.tipo.id
         if tipo != tipoVariable(valor):
-            errordeTipos("Declaración de " + asignacion.nombre[0].id)
-
+            if tipo == "Int64" and funcionusada == 0:
+                pass
+            elif tipo == "Foat64" and funcionusada == 0:
+                pass
+            else:
+                errordeTipos("Declaración de " + asignacion.nombre[0].id)
+                return ""
+    
+    # si ya existe el coso en la ts
     if aux:
         print('actualizando')
+        if aux.tipo == 'Function':
+            errorEquis('Asignación', 'ya existe una funcion con este nombre')
+            return ""
+
+        # actualizo el valor
+        simbolo = cst.NodoSimbolo(asignacion.nombre[0].id, tipo, ambito, aux.posicion)
+        simbolo.nota = 'Actualizado'
+        tablaSimbolos.actualizar(simbolo)
+        añadiraTabla(simbolo)
+
+        x = ""
+        posicion = aux.posicion
+        if tipo == "Int64" or tipo == "Float64" or funcionusada == 0:
+            x += getStack(posicion) + siwal + verificarT(valor) + fincomando        
+        elif tipo == "Bool" or funcionusada == 2 :
+            #print('-->', valor)
+            if valor == "False" or valor == "false" or valor == False:
+                valor = 0
+            else:
+                valor = 1
+            x += getStack(posicion) + siwal + str(valor) + fincomando  
+        elif tipo == "String" or funcionusada == 1 :
+            posenH = crearTemporal()
+            x += posenH + siwal + getH("")
+            
+            for i in valor:
+                ascii = ord(i)
+                x += getHeap("H") + siwal + str(ascii) + fincomando
+                x += aumentarH(1)
+
+            x += getHeap("H") + siwal + "-1" + fincomando
+            x += aumentarH(1)
+
+            x += getStack(posicion) + siwal + posenH + fincomando
+        elif tipo == "None" or tipo == None or funcionusada == 3:
+            x += getStack(posicion) + siwal + "0" + fincomando
+
+        meteraTraduccion(x)
+        return ""
+
+    # si el valor es nuevo  
     else:
         print('nuevo')
         # creo una nueva variable
@@ -200,22 +409,30 @@ def intScope(instr: Scope, tablaSimbolos : cst.TablaSimbolos):
         #acá meto mi c3d
 
         x = ""
-        if tipo == "Int64" or tipo == "Float64":
-            x += getStack(posicion) + siwal + str(valor) + fincomando        
-        elif tipo == "Bool":
+        if tipo == "Int64" or tipo == "Float64" or funcionusada == 0:
+            x += getStack(posicion) + siwal + verificarT(valor) + fincomando        
+        elif tipo == "Bool" or funcionusada == 2 :
             print('-->', valor)
             if valor == "False" or valor == "false" or valor == False:
                 valor = 0
-            else:
+            elif valor == "True" or valor == "true" or valor == True:
                 valor = 1
+            else: 
+                valor = verificarT(valor)
             x += getStack(posicion) + siwal + str(valor) + fincomando  
-        elif tipo == "String":
-            x += ""      
+        elif tipo == "String" or funcionusada == 1 :
+            x += getStack(posicion) + siwal + verificarT(valor) + fincomando
+        elif tipo == "None" or tipo == None or funcionusada == 3:
+            x += getStack(posicion) + siwal + "0" + fincomando
 
         meteraTraduccion(x)
+        global contavars
+        contavars = contavars +1
+        global usandovars
+        usandovars = 0
         return ""
-
-    
+  
+# endregion
 
 # ------------------------------------------------------------------------- 
 # OPERACIONES -------------------------------------------------------------
@@ -227,6 +444,9 @@ def resolverNumerica(Exp, tablaSimbolos: cst.TablaSimbolos):
     global smenos
     global fincomando
     global siwal
+    global funcionusada
+    funcionusada = 0
+    global usandovars
 
     if isinstance(Exp, OPNum):
         return Exp.val
@@ -236,11 +456,21 @@ def resolverNumerica(Exp, tablaSimbolos: cst.TablaSimbolos):
         print(Exp.term1, ' ', Exp.term2)
         if isinstance(Exp.term1, OPCadena) or isinstance(Exp.term2, OPCadena):
             x = resolverCadena(Exp, tablaSimbolos)
-            print('retornando opcadena: ', x)
             return x
+        
+        exp2 = resolverNumerica(Exp.term2, tablaSimbolos)
+        exp1 = resolverNumerica(Exp.term1, tablaSimbolos) 
 
-        exp1 = resolverNumerica(Exp.term1, tablaSimbolos)
-        exp2 = resolverNumerica(Exp.term2, tablaSimbolos) 
+        print('-->', funcionusada)
+        if funcionusada != 0:
+            print('oops, es otra binaria i')
+            usandovars = usandovars -2 # quitando las vars de exp1 y exp2
+            borrartemporal()
+            borrartemporal()
+
+            x = resolverCadena(Exp, tablaSimbolos)
+
+            return x
 
         if Exp.operador == ARITMETICA.MAS : 
             x = crearTemporal() + "=" + verificarT(exp1) + "+" + verificarT(exp2) + ";"
@@ -365,12 +595,6 @@ def resolverNumerica(Exp, tablaSimbolos: cst.TablaSimbolos):
         meteraTraduccion(x)
         return x
     
-    #OPERACIONES NATIVAS NUMEROS
-    elif isinstance(Exp, OPNativa):
-        return ""
-    elif isinstance(Exp, OPNativaLog):
-        return ""
-    
     #OPERACIONES NATIVAS EXTRA
     elif isinstance(Exp, FParse):
         exp1 = resolverNumerica(Exp.term1, tablaSimbolos)
@@ -425,14 +649,35 @@ def resolverNumerica(Exp, tablaSimbolos: cst.TablaSimbolos):
     elif isinstance(Exp, OPID):
         x = siExisteHardcore(Exp.id, tablaSimbolos)
         if x:
-            return x.valor
+            z = crearTemporal() + "=" + getStack(str(x.posicion))
+            meteraTraduccion(z)
+            
+            usandovars = usandovars +1
+
+            tipo = tipoEnTabla(x.posicion, tablaSimbolos)
+            if tipo == "String":
+                print('es-string ', 'usandovars: ', usandovars, ' funcionusada ', funcionusada)
+                funcionusada = 1                
+            elif tipo == "Int64" or tipo == "Float64" or tipo == "Numeric":
+                print('es-numeric ', 'usandovars: ', usandovars, ' funcionusada ', funcionusada)
+                funcionusada = 0                
+            elif tipo == "Nil":
+                print('es-nil ', 'usandovars: ', usandovars, ' funcionusada ', funcionusada)
+                funcionusada = 3                
+            else:
+                print('es-bool ', 'usandovars: ', usandovars, ' funcionusada ', funcionusada)
+                funcionusada = 2
+            return z                
         else: 
             print('FALLA EN ID')
-            return None
-    elif isinstance(Exp, OPType):
-        return getTipo(Exp)
+            return "0"
     elif isinstance(Exp, OPNothing):
-        return None
+        print('OPNOTHING')
+        funcionusada = 3
+        return "0"
+    
+    elif isinstance(Exp, OPType):
+        return ""
     elif isinstance(Exp, list):
         #print('Acá hay un arreglol')
         aux = []
@@ -495,9 +740,9 @@ def resolverNumerica(Exp, tablaSimbolos: cst.TablaSimbolos):
             aux.append(exp1)
             exp1 += 1
 
-        return aux
+        return ""
     elif isinstance(Exp, LlamadaFuncion): 
-        return None   
+        return ""   
     else: 
         print('viendo si se va a las cadenas, ', Exp)
         global contabucle
@@ -506,103 +751,154 @@ def resolverNumerica(Exp, tablaSimbolos: cst.TablaSimbolos):
             return ""
         return resolverCadena(Exp, tablaSimbolos)
 
-
-def resolverBooleana(Exp, tablaSimbolos: cst.TablaSimbolos):
-    if isinstance(Exp, OPLogica): 
-        print('RESOLVIENDO LOGICA')
-        print(Exp.term1, ' ', Exp.term2)
-
-        exp1 = resolverBooleana(Exp.term1, tablaSimbolos)
-        exp2 = resolverBooleana(Exp.term2, tablaSimbolos) 
-
-        if Exp.operador == LOGICA.AND : return exp1 and exp2
-        if Exp.operador == LOGICA.OR : return exp1 or exp2
-        if Exp.operador == LOGICA.MAYORQUE : return exp1 > exp2
-        if Exp.operador == LOGICA.MENORQUE : return exp1 < exp2
-        if Exp.operador == LOGICA.MAYORIWAL : return exp1 >= exp2
-        if Exp.operador == LOGICA.MENORIWAL : return exp1 <= exp2
-        if Exp.operador == LOGICA.IWAL : return exp1 == exp2
-        if Exp.operador == LOGICA.DISTINTO : return exp1 != exp2
-        else:  return None
-    elif isinstance(Exp, OPBool):
-        if Exp.id == 'false':
-            return False
-        return True
-    elif isinstance(Exp, OPNum):
-        return Exp.val
-    elif isinstance(Exp, OPCadena):
-        return Exp.id
-    elif isinstance(Exp, OPID):
-        x = siExisteHardcore(Exp.id, tablaSimbolos)
-        if x:
-            return x.valor
-        else: 
-            print('FALLA EN ID')
-            return None
-    elif isinstance(Exp, LlamadaArr):
-        print("llamando arreglo")
-        arr_indices = []
-        contadimensiones = 0
-        for indice in Exp.inds:
-            x = resolverNumerica(indice, tablaSimbolos)
-            print (tipoVariable(x), ' , ', x)
-
-            if tipoVariable(x) != 'Int64':
-                errordeTipos('Asignacion de Array')
-                return None
-
-            arr_indices.append(x)
-            contadimensiones += 1
-
-        arr = siExisteHardcore(Exp.nombre, tablaSimbolos)
-        if arr == False or not arr:
-            return None
-        
-        try:
-            if contadimensiones == 0: return errordeTipos('Asignación a arreglo')
-            elif contadimensiones == 1: 
-                return arr.valor[arr_indices[0]]
-            elif contadimensiones == 2:
-                return arr.valor[arr_indices[0]][arr_indices[1]]
-            elif contadimensiones == 3: 
-                return arr.valor[arr_indices[0]][arr_indices[1]][arr_indices[2]]
-        except Exception as e:
-            print(e)
-            return errorEquis('Asignación a arreglo', str(e))
-    else: 
-        print('viendo si se va a los numeros')
-        global contabucle
-        contabucle += 1
-        if contabucle > 20:
-            return None
-        return resolverNumerica(Exp, tablaSimbolos)
-
-
 def resolverCadena(Exp, tablaSimbolos: cst.TablaSimbolos):
+    global funcionusada 
+    funcionusada = 1
+    global usandovars
+
     if isinstance(Exp, OPBinaria):
+        print('RESOLVIENDO CADENA BINARIA')
         exp1 = resolverCadena(Exp.term1, tablaSimbolos)
         if isinstance(Exp.term2, OPNum):
             exp2 = resolverNumerica(Exp.term2, tablaSimbolos)
         else: exp2 = resolverCadena(Exp.term2, tablaSimbolos) 
 
-        #print(Exp.term2)
-        #print(tipoVariable(exp2), ' ', exp2)
-
-        if exp1 == None or exp2 == None:
-            return None
-
         if Exp.operador == ARITMETICA.ASTERISCO : 
-            return exp1 + str(exp2)
-        if Exp.operador == ARITMETICA.ELEVADO and tipoVariable(exp2) == 'Int64' and exp2 != None: 
-            
-            copia = str(exp1)
-            i = 1
-            while i < exp2:
-                copia += str(exp1)
-                i += 1
-            return copia
+            funcionusada = 1
+            # HACIENDO LA FUNCION
+            global yaconcatstring
+            if not yaconcatstring:
+                temp3 = crearTemporal()
+                temp4 = crearTemporal()
+                temp6 = crearTemporal()
+                temp5 = crearTemporal() 
+                temp7 = crearTemporal()     
+
+                salto1 = crearSalto()
+                salto2 = crearSalto()
+                salto3 = crearSalto()
+                salto4 = crearSalto()                          
+
+                y = temp3 + siwal + getH("")
+                y += temp4 + siwal + getP("+1") #cambio de ambito
+                y += temp6 + siwal + getStack(temp4) + fincomando #el stack de la 1 palabra, pos en h de la 1
+                y += temp5 + siwal + getP("+2") #cambiando de ambito x2
+                y += iniciarSalto(salto1)
+                y += temp7 + siwal + getHeap(temp6) + fincomando #inicio de la 1
+                y += crearIf(temp7 + " == -1", salto2)
+                y += getHeap("H") + siwal + temp7 + fincomando #copio la palabra 1 al heap
+                y += aumentarH(1)
+                y += tempmasmas(temp6) #aumento el temp que mira la posicion de las palabras
+                y += iniciarGoto(salto1)
+                y += iniciarSalto(salto2)
+                y += temp6 + siwal + getStack(temp5) + fincomando #si ya termino la 1, me posiciono en el principio de la 2
+                y += iniciarSalto(salto3) #1* letra de la 2
+                y += temp7 + siwal + getHeap(temp6) + fincomando
+                y += crearIf(temp7 + " == -1", salto4)
+                y += getHeap("H") + siwal + temp7 +fincomando #copio la 2* donde me quedé hast arriba del heap
+                y += aumentarH(1)
+                y += tempmasmas(temp6)
+                y += iniciarGoto(salto3)
+                y += iniciarSalto(salto4) #si ya terminé las 2 palabras
+                y += getHeap("H") + siwal + "-1" + fincomando #meto el fin de las 2 palabras
+                y += aumentarH(1)
+                y += getStack("P") + siwal + temp3 + fincomando #stack del nuevo es el inicio de H
+                y += "return" + fincomando
+
+
+                meterfuncion("concatenarStr", y)
+                yaconcatstring = True
+
+            # HACIENDO LO QUE VA EN EL MAIN
+
+            temp8 = crearTemporal()
+            temp9 = crearTemporal()
+
+
+            x = temp8 + siwal + getP("+" + str(contavars)) #cambio de ambito (?)
+            x += tempmasmas(temp8) 
+            x += getStack(temp8) + siwal + verificarT(exp1) + fincomando #posicion de str1
+            x += tempmasmas(temp8)
+            x += getStack(temp8) + siwal + verificarT(exp2) + fincomando #pos de str2
+            x += aumentarP(contavars)
+            x += "concatenarStr()" + fincomando
+            x += temp9 + siwal + getStack("P") + fincomando# acá es donde guardé el inicio del string concatenado
+            x += disminuirP(contavars)
+            meteraTraduccion(x)
+
+            return temp9
+        if Exp.operador == ARITMETICA.ELEVADO: # and tipoVariable(exp2) == 'Int64' and exp2 != None: 
+            funcionusada = 1
+            print('Es elevado al: ', exp2)
+            # HACIENDO LA FUNCION
+            if not yaconcatstring:
+                temp3 = crearTemporal()
+                temp4 = crearTemporal()
+                temp6 = crearTemporal()
+                temp5 = crearTemporal() 
+                temp7 = crearTemporal()     
+
+                salto1 = crearSalto()
+                salto2 = crearSalto()
+                salto3 = crearSalto()
+                salto4 = crearSalto()                          
+
+                y = temp3 + siwal + getH("")
+                y += temp4 + siwal + getP("+1") #cambio de ambito
+                y += temp6 + siwal + getStack(temp4) + fincomando #el stack de la 1 palabra, pos en h de la 1
+                y += temp5 + siwal + getP("+2") #cambiando de ambito x2
+                y += iniciarSalto(salto1)
+                y += temp7 + siwal + getHeap(temp6) + fincomando #inicio de la 1
+                y += crearIf(temp7 + " == -1", salto2)
+                y += getHeap("H") + siwal + temp7 + fincomando #copio la palabra 1 al heap
+                y += aumentarH(1)
+                y += tempmasmas(temp6) #aumento el temp que mira la posicion de las palabras
+                y += iniciarGoto(salto1)
+                y += iniciarSalto(salto2)
+                y += temp6 + siwal + getStack(temp5) + fincomando #si ya termino la 1, me posiciono en el principio de la 2
+                y += iniciarSalto(salto3) #1* letra de la 2
+                y += temp7 + siwal + getHeap(temp6) + fincomando
+                y += crearIf(temp7 + " == -1", salto4)
+                y += getHeap("H") + siwal + temp7 +fincomando #copio la 2* donde me quedé hast arriba del heap
+                y += aumentarH(1)
+                y += tempmasmas(temp6)
+                y += iniciarGoto(salto3)
+                y += iniciarSalto(salto4) #si ya terminé las 2 palabras
+                y += getHeap("H") + siwal + "-1" + fincomando #meto el fin de las 2 palabras
+                y += aumentarH(1)
+                y += getStack("P") + siwal + temp3 + fincomando #stack del nuevo es el inicio de H
+                y += "return" + fincomando
+
+
+                meterfuncion("concatenarStr", y)
+                yaconcatstring = True
+
+            # HACIENDO LO QUE VA EN EL MAIN
+
+            temp8 = crearTemporal() #el de la string
+            aux = exp1
+            for x in range(exp2-1):
+
+                temp9 = crearTemporal()
+                print('metiendo a ', temp9)
+                x = temp8 + siwal + getP("+" + str(contavars)) #cambio de ambito (?)
+                x += tempmasmas(temp8) 
+                x += getStack(temp8) + siwal + verificarT(exp1) + fincomando #posicion de str1
+                x += tempmasmas(temp8)
+
+                x += getStack(temp8) + siwal + verificarT(aux) + fincomando #pos de str2
+                x += aumentarP(contavars)
+                x += "concatenarStr()" + fincomando
+                x += temp9 + siwal + getStack("P") + fincomando# acá es donde guardé el inicio del string concatenado
+                x += disminuirP(contavars)
+                meteraTraduccion(x)
+                exp1 = temp9
+
+            return temp9
     elif isinstance(Exp, OPCadena):
-        return Exp.id
+        temp, trad = stringaHeap(Exp.id)
+        meteraTraduccion(trad)
+        return temp
     elif isinstance(Exp, OPLength):
         cad = resolverNumerica(Exp.term1, tablaSimbolos)
         if cad == None:
@@ -703,14 +999,6 @@ def resolverCadena(Exp, tablaSimbolos: cst.TablaSimbolos):
                     i += 1
                 return copia        
         except: return None
-    elif isinstance(Exp, OPID):
-        x = siExisteHardcore(Exp.id, tablaSimbolos)
-        if x:
-
-            return x.valor
-        else: 
-            print('FALLA EN ID')
-            return None
     elif isinstance(Exp, LlamadaArr):
         arr_indices = []
         contadimensiones = 0
@@ -753,10 +1041,86 @@ def resolverCadena(Exp, tablaSimbolos: cst.TablaSimbolos):
         return resolverBooleana(Exp, tablaSimbolos)
 
 
+def resolverBooleana(Exp, tablaSimbolos: cst.TablaSimbolos):
+    global funcionusada 
+    funcionusada = 2
+
+    if isinstance(Exp, OPLogica): 
+        print('RESOLVIENDO LOGICA')
+        print(Exp.term1, ' ', Exp.term2)
+
+        exp1 = resolverBooleana(Exp.term1, tablaSimbolos)
+        exp2 = resolverBooleana(Exp.term2, tablaSimbolos) 
+
+        if Exp.operador == LOGICA.AND : 
+            return exp1 and exp2
+        elif Exp.operador == LOGICA.OR : 
+            return exp1 or exp2
+        elif Exp.operador == LOGICA.MAYORQUE : 
+            return exp1 > exp2
+        elif Exp.operador == LOGICA.MENORQUE : 
+            return exp1 < exp2
+        elif Exp.operador == LOGICA.MAYORIWAL : 
+            return exp1 >= exp2
+        elif Exp.operador == LOGICA.MENORIWAL : 
+            return exp1 <= exp2
+        elif Exp.operador == LOGICA.IWAL : 
+            return exp1 == exp2
+        elif Exp.operador == LOGICA.DISTINTO : 
+            return exp1 != exp2
+        else:  return ""
+    elif isinstance(Exp, OPBool):
+        if Exp.id == 'false':
+            return False
+        return True
+    elif isinstance(Exp, OPNum):
+        return Exp.val
+    elif isinstance(Exp, LlamadaArr):
+        print("llamando arreglo")
+        arr_indices = []
+        contadimensiones = 0
+        for indice in Exp.inds:
+            x = resolverNumerica(indice, tablaSimbolos)
+            print (tipoVariable(x), ' , ', x)
+
+            if tipoVariable(x) != 'Int64':
+                errordeTipos('Asignacion de Array')
+                return None
+
+            arr_indices.append(x)
+            contadimensiones += 1
+
+        arr = siExisteHardcore(Exp.nombre, tablaSimbolos)
+        if arr == False or not arr:
+            return None
+        
+        try:
+            if contadimensiones == 0: return errordeTipos('Asignación a arreglo')
+            elif contadimensiones == 1: 
+                return arr.valor[arr_indices[0]]
+            elif contadimensiones == 2:
+                return arr.valor[arr_indices[0]][arr_indices[1]]
+            elif contadimensiones == 3: 
+                return arr.valor[arr_indices[0]][arr_indices[1]][arr_indices[2]]
+        except Exception as e:
+            print(e)
+            return errorEquis('Asignación a arreglo', str(e))
+    else: 
+        print('viendo si se va a los numeros')
+        global contabucle
+        contabucle += 1
+        if contabucle > 20:
+            return None
+        return resolverNumerica(Exp, tablaSimbolos)
+
+
+
+
 # ------------------------------------------------------------------------- 
 # AUXILIARES --------------------------------------------------------------
 # ------------------------------------------------------------------------- 
 
+# region Auxiliares
 def siExiste(nombre, tablaSimbolos: cst.TablaSimbolos):
     aux = tablaSimbolos.obtener(nombre)
     if isinstance(aux, cst.NodoErrorSemantico):
@@ -776,16 +1140,13 @@ def siExisteHardcore(nombre, tablaSimbolos: cst.TablaSimbolos):
         return False
     else: return aux
 
+def tipoEnTabla(posicion, tablaSimbolos: cst.TablaSimbolos):
+    return tablaSimbolos.obtenerTipo(posicion)
+
 def añadiraTabla(simbolo: cst.NodoSimbolo):
     global lista_simbolos
     lista_simbolos.append(simbolo)
-
-def getTipo(tipo: OPType):
-    if isinstance(tipo.id, OPID):
-        return tipo.id.id
-    else :
-        return tipo.id
-    
+ 
 def tipoVariable(var):
     x = str(type(var))
     if 'str' in x:
@@ -822,14 +1183,24 @@ def errorEquis(nombre_instruccion, razon):
     listasemanticos.append(nuevo)
     return None
 
+# endregion
 
 # ------------------------------------------------------------------------- 
 # COMPILADOR --------------------------------------------------------------
 # ------------------------------------------------------------------------- 
 
+#region compilador
 def funcionesencero():
     global yapotencia
     yapotencia = False
+    global yaconcatstring
+    yaconcatstring = False
+    global yaprintstring
+    yaprintstring = False
+    global usandovars
+    usandovars = 0
+    global contavars
+    contavars = 0
 
 def meterPalabra(texto):
     aux = ""
@@ -837,6 +1208,20 @@ def meterPalabra(texto):
         ascii = ord(i)
         aux += "fmt.Printf(\"%c\"," + str(ascii) +");\n"
     return aux
+
+# STRING
+def stringaHeap(valor):
+    posenH = crearTemporal()
+    x = posenH + siwal + getH("")
+            
+    for i in valor:
+        ascii = ord(i)
+        x += getHeap("H") + siwal + str(ascii) + fincomando
+        x += aumentarH(1)
+
+    x += getHeap("H") + siwal + "-1" + fincomando
+    x += aumentarH(1)
+    return posenH, x
 
 # TABLA DE SIMBOLOS
 def crearposicion():
@@ -861,7 +1246,6 @@ def meterfuncion(nombre: str,texto:str):
 def crearIf(comparacion, goto):
     x = "if(" + comparacion + ") {goto " + goto + "}\n"
     return x
-
 
 # SALTOS
 def crearSalto():
@@ -888,6 +1272,10 @@ def crearTemporal():
     contatemporales += 1
     return "t" + str(x)
 
+def borrartemporal():
+    global contatemporales
+    contatemporales -= 1
+
 def getTemporal(indice): 
     global contatemporales
     x = contatemporales - indice -1
@@ -907,41 +1295,43 @@ def tempmenosmenos(temp):
     return temp + " = " + temp + "-1;\n"    
 
 # P 
-def aumentarP(unidades):
+def aumentarP(unidades: int):
     global p
     p = p + unidades
-    trad = "P=P+" + str(unidades) + ";"
-    meteraTraduccion(trad)
+    trad = "P=P+" + str(unidades) + fincomando
+    return trad
 
-def disminuirP(unidades):
+def disminuirP(unidades: int):
     global p
     p = p - unidades
-    trad = "P=P-" + str(unidades) + ";"
-    meteraTraduccion(trad)
+    trad = "P=P-" + str(unidades) + fincomando
+    return trad
 
 def getP(mod):
     return "P" + mod + ";\n"
 
 # H
-def aumentarH(unidades):
+def aumentarH(unidades: int):
     global h
     h = h + unidades
-    trad = "H=H+" + str(unidades) + ";"
-    meteraTraduccion(trad)
+    trad = "H=H+" + str(unidades) + fincomando
+    return trad
 
-def disminuirH(unidades):
+def disminuirH(unidades: int):
     global h
     h = h - unidades
-    trad = "H=H-" + str(unidades) + ";"
-    meteraTraduccion(trad)
+    trad = "H=H-" + str(unidades) + fincomando
+    return trad
 
 def getH(mod):
     return "H" + mod + ";\n"
 
 # HEAP
 def getHeap(temporal):
-    return "heap[" + str(temporal) + "]"
+    return "heap[int(" + str(temporal) + ")]"
 
 # STACK
 def getStack(temporal):
     return "stack[int(" + str(temporal) + ")]"
+
+# endregion
