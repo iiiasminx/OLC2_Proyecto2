@@ -4,6 +4,7 @@ import json
 from a_lexico import fighting
 from a_sintactico import fighting2
 from compilador  import compilando
+from optimizador import Optimizador1, Optimizador2
 #from interprete import fightingfinal
 
 app = Flask(__name__, static_url_path='')
@@ -20,13 +21,16 @@ def compilado(codigo):
 
 
 def optim1(codigo):
-    print('optim1')
-    txt = 'optim1'
+    
+    optimizador1 = Optimizador1()
+    optimizado = optimizador1.optimizar(codigo)
+    txt = optimizado
     return txt
 
 def optim2(codigo):
-    print('optim2')
-    txt = 'optim2'
+    optimizador1 = Optimizador2()
+    optimizado = optimizador1.optimizar(codigo)
+    txt = optimizado
     return txt
 
 
@@ -57,9 +61,11 @@ def submit():
         if 'Compilar' in request.form:
             paquete = compilado(entrada)
         elif 'Optimizar1' in request.form:
-            paquete = optim1(entrada)
+            cosito = compilado(entrada)
+            paquete = optim1(cosito.traduccion)
         elif 'Optimizar2' in request.form:
-            paquete = optim2(entrada)
+            cosito = compilado(entrada)
+            paquete = optim2(cosito.traduccion)
 
         return render_template('index.html', salida=paquete.traduccion, entrada=entrada, 
         errores=paquete.tabla_errores, lexicos=paquete.errores_lexicos, 
