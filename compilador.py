@@ -43,8 +43,16 @@ funcionusada = 0
 yapotencia = False
 yaconcatstring = False
 yaprintstring = False
+yacomparestrings = False
+
+# vars extra
 usandovars = 0 # las vars de la instruccion
 contavars = 0   #las vars del todo
+saltotrue = ""
+saltofalse = ""
+saltorest = ""
+usandologica = [2] # pila de cosos
+comparandocadenas = False
 
 def compilando(texto):
     # seteando todo como debe ser :v
@@ -121,8 +129,7 @@ def procesarInstrucciones(ast, tablaSimbolos : cst.TablaSimbolos):
         contador += 1
         global contabucle
         contabucle = 0
-        global usandovars
-        usandovars = 0
+        instruccionesencero()
 
         #OPERACIONES
         if extra != "" : return
@@ -138,95 +145,16 @@ def procesarInstrucciones(ast, tablaSimbolos : cst.TablaSimbolos):
 # region impresion -- revisada
 def intImpresion(instr, tablaSimbolos: cst.TablaSimbolos):
     print('impresion')
-    aux = ""
-    global funcionusada
-    for instruccion in instr.texto:
-        # tal vez le tenga que poner un if al res, pero una crisis a la vez xd
-        funcionusada = 0
-
-        res = resolverNumerica(instruccion, tablaSimbolos)
-        global usandovars
-        global contavars
-
-        if funcionusada == 0: #numerica
-            var = verificarT(res)
-            txt = "\"%d\", int(" + var  + ")"
-            if "." in str(res) or "t" in str(res): 
-                txt = "\"%f\", " + var 
-            aux += "fmt.Printf(" + txt + ");\n" 
-        elif funcionusada == 1: #strings
-            var = verificarT(res)
-
-            global yaprintstring
-            if not yaprintstring:
-                yaprintstring = True
-
-                temp1 = crearTemporal()
-                temp2 = crearTemporal()
-                temp3 = crearTemporal()
-
-                salto1 = crearSalto()
-                salto2 = crearSalto()
-                y = ""
-
-                y += temp1 + siwal+ getP("+1")
-                y += temp2 + siwal + getStack(temp1) + fincomando  #pos en h del str temp               
-                y += iniciarSalto(salto1) 
-                y += temp3 + siwal + getHeap(temp2) + fincomando
-                y += crearIf(temp3 + " == -1", salto2)
-                y += "fmt.Printf(\"%c\", int(" + temp3 +"))" + fincomando
-                y += tempmasmas(temp2)
-                y += iniciarGoto(salto1)
-                y += iniciarSalto(salto2)
-                y += "return" + fincomando
-
-                meterfuncion("imprimir", y)
-
-
-            temp5 = crearTemporal()
-            temp6 = crearTemporal()
-            
-            aux += temp5 + siwal + getP("+" + str(contavars))
-            aux += tempmasmas(temp5)
-            aux += getStack(temp5) + siwal + var + fincomando
-            aux += aumentarP(contavars)
-            aux += "imprimir()" + fincomando
-            aux += temp6 + siwal + getStack("P") + fincomando
-            aux += disminuirP(contavars)
-
-        elif funcionusada == 2: #bools
-            var = verificarT(res)
-
-            if usandovars:
-                strue = crearSalto()
-                sfalse = crearSalto()
-                sfinal = crearSalto()
-
-                aux += crearIf(var + " == 1", strue)
-                aux += iniciarGoto(sfalse)
-                aux += iniciarSalto(strue)
-                aux += meterPalabra("true")
-                aux += iniciarGoto(sfinal)
-                aux += iniciarSalto(sfalse)
-                aux += meterPalabra("false")
-                aux += iniciarSalto(sfinal)
-            else:
-                if 'alse' in var or 'alse' in str(res):
-                    aux += meterPalabra('False')
-                else:
-                    aux += meterPalabra('True')
-        elif funcionusada == 3: #nothing
-            aux += meterPalabra('nil')
-
-        usandovars = 0
-           
-    aux += "fmt.Printf(\"%c\", 10);\n"
-    meteraTraduccion(aux)     
+    
 
 def intImpresionLN(instr, tablaSimbolos : cst.TablaSimbolos):
     print('impresionLN')
     aux = ""
     global funcionusada
+    global saltotrue
+    global saltofalse
+    global saltorest
+
     for instruccion in instr.texto:
         # tal vez le tenga que poner un if al res, pero una crisis a la vez xd
         funcionusada = 0
@@ -283,28 +211,33 @@ def intImpresionLN(instr, tablaSimbolos : cst.TablaSimbolos):
         elif funcionusada == 2: #bools
             var = verificarT(res)
 
-            if usandovars:
-                strue = crearSalto()
-                sfalse = crearSalto()
-                sfinal = crearSalto()
+            if saltofalse == "" or saltotrue == "":
+                saltotrue = crearSalto()
+                saltofalse = crearSalto()
+                saltorest = crearSalto()
 
-                aux += crearIf(var + " == 1", strue)
-                aux += iniciarGoto(sfalse)
-                aux += iniciarSalto(strue)
-                aux += meterPalabra("true")
-                aux += iniciarGoto(sfinal)
-                aux += iniciarSalto(sfalse)
-                aux += meterPalabra("false")
-                aux += iniciarSalto(sfinal)
-            else:
-                if 'alse' in var or 'alse' in str(res):
-                    aux += meterPalabra('False')
-                else:
-                    aux += meterPalabra('True')
+            if var == False or 'alse' in var:
+                var = "0"
+            elif var == True or 'rue' in var:
+                var = "1"
+
+            if usandovars:
+                aux += crearIf(var + " == 1", saltotrue)
+                aux += iniciarGoto(saltofalse)
+
+            aux += iniciarSalto(saltotrue)
+            aux += meterPalabra("true")
+            aux += iniciarGoto(saltorest)
+            aux += iniciarSalto(saltofalse)
+            aux += meterPalabra("false")
+            aux += iniciarSalto(saltorest)
+            
         elif funcionusada == 3: #nothing
             aux += meterPalabra('nil')
 
-        usandovars = 0
+        instruccionesencero()
+        saltofalse = ""
+        saltotrue = ""
            
     aux += "fmt.Printf(\"%c\", 10)" + fincomando
     meteraTraduccion(aux)   
@@ -320,6 +253,9 @@ def intDeclaracion(instr:Asignacion, tablaSimbolos : cst.TablaSimbolos):
 
 def intScope(instr: Scope, tablaSimbolos : cst.TablaSimbolos):
     print('Asignando en scope')
+    global saltofalse
+    global saltotrue
+    global saltorest
 
     ambito = 'local'
     if instr.scope == 'global':
@@ -419,7 +355,24 @@ def intScope(instr: Scope, tablaSimbolos : cst.TablaSimbolos):
                 valor = 1
             else: 
                 valor = verificarT(valor)
+            
+            if saltofalse == "" or saltotrue == "":
+                saltotrue = crearSalto()
+                saltofalse = crearSalto()
+                saltorest = crearSalto()
+            
+            x += metercomentario('inicio -- Para que funcione T.T')
+            x += crearIf("0 != 0", saltofalse)
+            x += iniciarGoto(saltotrue)
+            x += metercomentario('fin -- Para que funcione T.T')
+
+            x += iniciarSalto(saltotrue)
             x += getStack(posicion) + siwal + str(valor) + fincomando  
+            x += iniciarGoto(saltorest)
+            x += iniciarSalto(saltofalse)
+            x += getStack(posicion) + siwal + "0" + fincomando
+            x += iniciarSalto(saltorest)
+
         elif tipo == "String" or funcionusada == 1 :
             x += getStack(posicion) + siwal + verificarT(valor) + fincomando
         elif tipo == "None" or tipo == None or funcionusada == 3:
@@ -428,8 +381,7 @@ def intScope(instr: Scope, tablaSimbolos : cst.TablaSimbolos):
         meteraTraduccion(x)
         global contavars
         contavars = contavars +1
-        global usandovars
-        usandovars = 0
+        instruccionesencero()
         return ""
   
 # endregion
@@ -1040,33 +992,351 @@ def resolverCadena(Exp, tablaSimbolos: cst.TablaSimbolos):
             return None
         return resolverBooleana(Exp, tablaSimbolos)
 
-
 def resolverBooleana(Exp, tablaSimbolos: cst.TablaSimbolos):
     global funcionusada 
+    global saltofalse
+    global saltotrue
+    global saltorest
+    global usandologica
+    global comparandocadenas
+    global contavars
     funcionusada = 2
 
     if isinstance(Exp, OPLogica): 
         print('RESOLVIENDO LOGICA')
         print(Exp.term1, ' ', Exp.term2)
 
+        if Exp.operador == LOGICA.AND :
+            usandologica.append(0)
+            print('ES UN AND')
+        elif Exp.operador == LOGICA.OR : 
+            usandologica.append(1)
+            print('ES UN OR')
+
         exp1 = resolverBooleana(Exp.term1, tablaSimbolos)
         exp2 = resolverBooleana(Exp.term2, tablaSimbolos) 
 
+        if exp1  == True or exp1 == False:
+            pass
+        else:
+            print('-->', exp1, ' ', exp2, ' log: ', usandologica )
+
+        #no se muestran
         if Exp.operador == LOGICA.AND : 
+            print('poping ', usandologica[-1], ' ', usandologica)
+            usandologica.pop(-1)
             return exp1 and exp2
         elif Exp.operador == LOGICA.OR : 
+            print('poping ', usandologica[-1], ' ', usandologica)
+            usandologica.pop(-1)
             return exp1 or exp2
-        elif Exp.operador == LOGICA.MAYORQUE : 
+        # si se muestran
+        elif Exp.operador == LOGICA.MAYORQUE :            
+            x = ""
+            if saltofalse == "" or saltotrue == "":
+                saltotrue = crearSalto()
+                saltofalse = crearSalto()
+                saltorest = crearSalto()
+            
+            if usandologica[-1] == 0:
+                x += iniciarSalto(saltotrue)
+                saltotrue = crearSalto()
+            elif usandologica[-1] == 1:
+                x += iniciarSalto(saltofalse)
+                saltofalse = crearSalto()
+
+            
+            x += crearIf(verboolastring(exp1) + ">" + verboolastring(exp2), saltotrue)
+            x += iniciarGoto(saltofalse)
+            meteraTraduccion(x)
+
+            if "=0-" in str(exp1):
+                u = exp1.split("=0-")
+                p = u[-1][:-1]
+                p = p[:-1]
+                w = -int(p)  
+                exp1 = w
+            if "=0-" in str(exp2):
+                u = exp2.split("=0-")
+                p = u[-1][:-1]
+                p = p[:-1]
+                w = -int(p)  
+                exp2 = w  
+
             return exp1 > exp2
-        elif Exp.operador == LOGICA.MENORQUE : 
+        elif Exp.operador == LOGICA.MENORQUE :
+            x = ""
+            if saltofalse == "" or saltotrue == "":
+                saltotrue = crearSalto()
+                saltofalse = crearSalto()
+                saltorest = crearSalto()
+            elif usandologica[-1] == 0:
+                x += iniciarSalto(saltotrue)
+                saltotrue = crearSalto()
+            elif usandologica[-1] == 1:
+                x += iniciarSalto(saltofalse)
+                saltofalse = crearSalto()
+
+            x += crearIf(verboolastring(exp1) + "<" + verboolastring(exp2), saltotrue)
+            x += iniciarGoto(saltofalse)
+            meteraTraduccion(x)
+            if "=0-" in str(exp1):
+                u = exp1.split("=0-")
+                p = u[-1][:-1]
+                p = p[:-1]
+                w = -int(p)  
+                exp1 = w
+            if "=0-" in str(exp2):
+                u = exp2.split("=0-")
+                p = u[-1][:-1]
+                p = p[:-1]
+                w = -int(p)  
+                exp2 = w  
+
+
             return exp1 < exp2
-        elif Exp.operador == LOGICA.MAYORIWAL : 
+        elif Exp.operador == LOGICA.MAYORIWAL :
+            x = ""
+            if saltofalse == "" or saltotrue == "":
+                saltotrue = crearSalto()
+                saltofalse = crearSalto()
+                saltorest = crearSalto()
+            elif usandologica[-1] == 0:
+                x += iniciarSalto(saltotrue)
+                saltotrue = crearSalto()
+            elif usandologica[-1] == 1:
+                x += iniciarSalto(saltofalse)
+                saltofalse = crearSalto()
+
+            x += crearIf(verboolastring(exp1) + ">=" + verboolastring(exp2), saltotrue)
+            x += iniciarGoto(saltofalse)
+            meteraTraduccion(x)
+
+            if "=0-" in str(exp1):
+                u = exp1.split("=0-")
+                p = u[-1][:-1]
+                p = p[:-1]
+                w = -int(p)  
+                exp1 = w
+            if "=0-" in str(exp2):
+                u = exp2.split("=0-")
+                p = u[-1][:-1]
+                p = p[:-1]
+                w = -int(p)  
+                exp2 = w  
+
+
             return exp1 >= exp2
         elif Exp.operador == LOGICA.MENORIWAL : 
+            x = ""
+            if saltofalse == "" or saltotrue == "":
+                saltotrue = crearSalto()
+                saltofalse = crearSalto()
+                saltorest = crearSalto()
+            elif usandologica[-1] == 0:
+                x += iniciarSalto(saltotrue)
+                saltotrue = crearSalto()
+            elif usandologica[-1] == 1:
+                x += iniciarSalto(saltofalse)
+                saltofalse = crearSalto()
+
+            x += crearIf(verboolastring(exp1) + "<=" + verboolastring(exp2), saltotrue)
+            x += iniciarGoto(saltofalse)
+            meteraTraduccion(x)
+
+            if "=0-" in str(exp1):
+                u = exp1.split("=0-")
+                p = u[-1][:-1]
+                p = p[:-1]
+                w = -int(p)  
+                exp1 = w
+            if "=0-" in str(exp2):
+                u = exp2.split("=0-")
+                p = u[-1][:-1]
+                p = p[:-1]
+                w = -int(p)  
+                exp2 = w  
+
+
             return exp1 <= exp2
         elif Exp.operador == LOGICA.IWAL : 
+            x = ""
+
+            if saltofalse == "" or saltotrue == "":
+                saltotrue = crearSalto()
+                saltofalse = crearSalto()
+                saltorest = crearSalto()
+            elif usandologica[-1] == 0:
+                x += iniciarSalto(saltotrue)
+                saltotrue = crearSalto()
+            elif usandologica[-1] == 1:
+                x += iniciarSalto(saltofalse)
+                saltofalse = crearSalto()
+
+            if comparandocadenas:
+                if not yacomparestrings:
+
+                    temp2 = crearTemporal()
+                    temp3 = crearTemporal()
+                    temp4 = crearTemporal()
+                    temp5 = crearTemporal()
+                    temp6 = crearTemporal()
+
+                    salto1 = crearSalto()
+                    salto2 = crearSalto()
+                    salto3 = crearSalto()
+                    salto4 = crearSalto()
+
+                    y = ""
+                    y += temp2 + siwal +getP("+1")
+                    y += temp3 + siwal + getStack(temp2) + fincomando
+                    y += tempmasmas(temp2)
+                    y += temp4 + siwal + getStack(temp2) + fincomando
+                    y += iniciarSalto(salto1)
+                    y += temp5 +  siwal + getHeap(temp3) + fincomando
+                    y += temp6 + siwal + getHeap(temp4) + fincomando
+                    y += crearIf(temp5 + "!=" + temp6, salto3)
+                    y += crearIf(temp5 + "== -1", salto2)
+                    y += tempmasmas(temp3)
+                    y += tempmasmas(temp4)
+                    y += iniciarGoto(salto1)
+                    y += iniciarSalto(salto2)
+                    y += getStack("P") + siwal + "1" + fincomando #si alch son iwales
+                    y += iniciarGoto(salto4)
+                    y += iniciarSalto(salto3)
+                    y += getStack("P") + siwal + "0" + fincomando #si alch no son iwales
+                    y += iniciarSalto(salto4)
+                    y += "return" + fincomando
+
+                    meterfuncion('compareStrings', y)
+
+                temp7 = crearTemporal()
+                temp8 = crearTemporal()
+
+                x += temp7 + siwal + getP("+" + str(contavars))
+                x += tempmasmas(temp7)
+                x += getStack(temp7) + siwal + exp1 + fincomando
+                x += tempmasmas(temp7)
+                x += getStack(temp7) + siwal + exp2 + fincomando
+                x += aumentarP(contavars)
+                x += "compareStrings()" + fincomando
+                x += temp8 + siwal + getStack("P") + fincomando
+                x += disminuirP(contavars)
+
+                x += crearIf(temp8 + " == 1", saltotrue)
+                x += iniciarGoto(saltofalse)
+                meteraTraduccion(x)
+                comparandocadenas = False
+                return Exp.term1.id == Exp.term2.id
+            
+            x += crearIf(verboolastring(exp1) + "==" + verboolastring(exp2), saltotrue)
+            x += iniciarGoto(saltofalse)
+            meteraTraduccion(x)
+
+            if "=0-" in str(exp1):
+                u = exp1.split("=0-")
+                p = u[-1][:-1]
+                p = p[:-1]
+                w = -int(p)  
+                exp1 = w
+            if "=0-" in str(exp2):
+                u = exp2.split("=0-")
+                p = u[-1][:-1]
+                p = p[:-1]
+                w = -int(p)  
+                exp2 = w  
+
+
             return exp1 == exp2
-        elif Exp.operador == LOGICA.DISTINTO : 
+        elif Exp.operador == LOGICA.DISTINTO :
+            x = ""
+
+            if saltofalse == "" or saltotrue == "":
+                saltotrue = crearSalto()
+                saltofalse = crearSalto()
+                saltorest = crearSalto()
+            elif usandologica[-1] == 0:
+                x += iniciarSalto(saltotrue)
+                saltotrue = crearSalto()
+            elif usandologica[-1] == 1:
+                x += iniciarSalto(saltofalse)
+                saltofalse = crearSalto()
+
+            if comparandocadenas:
+                if not yacomparestrings:
+
+                    temp2 = crearTemporal()
+                    temp3 = crearTemporal()
+                    temp4 = crearTemporal()
+                    temp5 = crearTemporal()
+                    temp6 = crearTemporal()
+
+                    salto1 = crearSalto()
+                    salto2 = crearSalto()
+                    salto3 = crearSalto()
+                    salto4 = crearSalto()
+
+                    y = ""
+                    y += temp2 + siwal +getP("+1")
+                    y += temp3 + siwal + getStack(temp2) + fincomando
+                    y += tempmasmas(temp2)
+                    y += temp4 + siwal + getStack(temp2) + fincomando
+                    y += iniciarSalto(salto1)
+                    y += temp5 +  siwal + getHeap(temp3) + fincomando
+                    y += temp6 + siwal + getHeap(temp4) + fincomando
+                    y += crearIf(temp5 + "!=" + temp6, salto3)
+                    y += crearIf(temp5 + "== -1", salto2)
+                    y += tempmasmas(temp3)
+                    y += tempmasmas(temp4)
+                    y += iniciarGoto(salto1)
+                    y += iniciarSalto(salto2)
+                    y += getStack("P") + siwal + "1" + fincomando #si alch son iwales
+                    y += iniciarGoto(salto4)
+                    y += iniciarSalto(salto3)
+                    y += getStack("P") + siwal + "0" + fincomando #si alch no son iwales
+                    y += iniciarSalto(salto4)
+                    y += "return" + fincomando
+
+                    meterfuncion('compareStrings', y)
+
+                temp7 = crearTemporal()
+                temp8 = crearTemporal()
+
+                x += temp7 + siwal + getP("+" + str(contavars))
+                x += tempmasmas(temp7)
+                x += getStack(temp7) + siwal + exp1 + fincomando
+                x += tempmasmas(temp7)
+                x += getStack(temp7) + siwal + exp2 + fincomando
+                x += aumentarP(contavars)
+                x += "compareStrings()" + fincomando
+                x += temp8 + siwal + getStack("P") + fincomando
+                x += disminuirP(contavars)
+
+                x += crearIf(temp8 + " == 1", saltotrue)
+                x += iniciarGoto(saltofalse)
+                meteraTraduccion(x)
+                comparandocadenas = False
+                return Exp.term1.id == Exp.term2.id
+            
+            
+            x += crearIf(verboolastring(exp1) + "!=" + verboolastring(exp2), saltotrue)
+            x += iniciarGoto(saltofalse)
+            meteraTraduccion(x)
+
+            if "=0-" in str(exp1):
+                u = exp1.split("=0-")
+                p = u[-1][:-1]
+                p = p[:-1]
+                w = -int(p)  
+                exp1 = w
+            if "=0-" in str(exp2):
+                u = exp2.split("=0-")
+                p = u[-1][:-1]
+                p = p[:-1]
+                w = -int(p)  
+                exp2 = w  
+
+
             return exp1 != exp2
         else:  return ""
     elif isinstance(Exp, OPBool):
@@ -1105,6 +1375,11 @@ def resolverBooleana(Exp, tablaSimbolos: cst.TablaSimbolos):
         except Exception as e:
             print(e)
             return errorEquis('Asignación a arreglo', str(e))
+    elif isinstance(Exp, OPCadena):
+        temp, trad = stringaHeap(Exp.id)
+        meteraTraduccion(trad)
+        comparandocadenas = True
+        return temp
     else: 
         print('viendo si se va a los numeros')
         global contabucle
@@ -1112,8 +1387,6 @@ def resolverBooleana(Exp, tablaSimbolos: cst.TablaSimbolos):
         if contabucle > 20:
             return None
         return resolverNumerica(Exp, tablaSimbolos)
-
-
 
 
 # ------------------------------------------------------------------------- 
@@ -1201,6 +1474,22 @@ def funcionesencero():
     usandovars = 0
     global contavars
     contavars = 0
+    global yacomparestrings 
+    yacomparestrings = 0
+
+def instruccionesencero():
+    global usandovars
+    usandovars = 0
+    global usandologica
+    usandologica = [2]
+    global saltofalse
+    saltofalse = ""
+    global saltotrue 
+    saltotrue = ""
+    global saltorest
+    saltorest = ""
+    global comparandocadenas
+    comparandocadenas = False
 
 def meterPalabra(texto):
     aux = ""
@@ -1208,6 +1497,15 @@ def meterPalabra(texto):
         ascii = ord(i)
         aux += "fmt.Printf(\"%c\"," + str(ascii) +");\n"
     return aux
+
+# BOOLS
+def verboolastring(exp):
+    var = verificarT(exp)
+    if verificarT(exp) == False or 'alse' in verificarT(exp):
+        var = "0"
+    elif verificarT(exp) == True or 'rue' in verificarT(exp):
+        var = "1"
+    return var
 
 # STRING
 def stringaHeap(valor):
@@ -1242,6 +1540,8 @@ def meterfuncion(nombre: str,texto:str):
     tradfunciones += texto
     tradfunciones += "\n}\n"
 
+def metercomentario(texto):
+    return "// " + texto + "\n" 
 # IF
 def crearIf(comparacion, goto):
     x = "if(" + comparacion + ") {goto " + goto + "}\n"
