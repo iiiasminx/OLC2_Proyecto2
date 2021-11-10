@@ -168,14 +168,14 @@ def fighting(texto):
     lexer = lex.lex()
     lexer.input(texto)
 
-    while True:
-        tok = lexer.token()
-        if not tok : break
-        print(tok)
+    #while True:
+    #    tok = lexer.token()
+    #    if not tok : break
+    #    print(tok)
     
     print(listaErrores)
     return listaErrores
 
 
 #EXTRAS
-fighting('stack[int(2)] = 2021.202;H=H+1;fmt.Printf??("%c", 10);')
+#fighting('stack[int(2)] = 2021.202;H=H+1;fmt.Printf??("%c", 10);')

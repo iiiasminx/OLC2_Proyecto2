@@ -61,11 +61,9 @@ def submit():
         if 'Compilar' in request.form:
             paquete = compilado(entrada)
         elif 'Optimizar1' in request.form:
-            cosito = compilado(entrada)
-            paquete = optim1(cosito.traduccion)
+            paquete = optim1(entrada)
         elif 'Optimizar2' in request.form:
-            cosito = compilado(entrada)
-            paquete = optim2(cosito.traduccion)
+            paquete = optim2(entrada)
 
         return render_template('index.html', salida=paquete.traduccion, entrada=entrada, 
         errores=paquete.tabla_errores, lexicos=paquete.errores_lexicos, 

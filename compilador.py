@@ -44,6 +44,8 @@ yapotencia = False
 yaconcatstring = False
 yaprintstring = False
 yacomparestrings = False
+yalowercase = False
+yauppercase = False
 
 # vars extra
 usandovars = 0 # las vars de la instruccion
@@ -100,6 +102,9 @@ def compilando(texto):
                 traduccion +=  "t" + str(i) + " float64\n\n"
             else:
                 traduccion +=  "t" + str(i) + ", "
+
+    else:
+        traduccion += "var t0 float64\n\n"
 
     
     traduccion += "//------FUNCIONES------\n"
@@ -401,6 +406,12 @@ def resolverNumerica(Exp, tablaSimbolos: cst.TablaSimbolos):
     global usandovars
 
     if isinstance(Exp, OPNum):
+        
+        if Exp.val == 0:
+            temp = crearTemporal()
+            x = temp + siwal + '0' + fincomando
+            meteraTraduccion(x)
+            return x
         return Exp.val
     elif isinstance(Exp, OPBinaria): 
         
@@ -442,7 +453,7 @@ def resolverNumerica(Exp, tablaSimbolos: cst.TablaSimbolos):
             restocodigo = crearSalto()
             
             x = crearIf(verificarT(exp2) + " != 0", noerror)
-            x += meterPalabra("MathError")
+            x += meterPalabra("MathError\n")
             x += resultado + siwal + "0" + fincomando
             x += iniciarGoto(restocodigo)
             x += iniciarSalto(noerror)
@@ -513,15 +524,8 @@ def resolverNumerica(Exp, tablaSimbolos: cst.TablaSimbolos):
             posicionStack = crearTemporal()
             respuesta = crearTemporal()
             y = ""
-            aux = ""
-            aux2 = ""
-            #si alguna de las exps es un temporal, p sube uno
-            if "t" in verificarT(exp1) or "t" in verificarT(exp2):
-                aux =  " = " + getP("+1")
-                aux2 =  " = " + getP("-1")
-            else:
-                aux =  " = " + getP("+0")
-                aux2 =  " = " + getP("-0")
+            aux =  siwal + getP("+" + str(contavars))
+            aux2 =  siwal + getP("-" + str(contavars) )
             
             y += posicionStack + aux
             y += posicionStack + " = " + posicionStack + "+1;\n" #en una nueva posicion de stack
@@ -601,7 +605,7 @@ def resolverNumerica(Exp, tablaSimbolos: cst.TablaSimbolos):
     elif isinstance(Exp, OPID):
         x = siExisteHardcore(Exp.id, tablaSimbolos)
         if x:
-            z = crearTemporal() + "=" + getStack(str(x.posicion))
+            z = crearTemporal() + "=" + getStack(str(x.posicion)) + fincomando
             meteraTraduccion(z)
             
             usandovars = usandovars +1
@@ -906,17 +910,104 @@ def resolverCadena(Exp, tablaSimbolos: cst.TablaSimbolos):
             añadiraTabla(obj)
         return arr
     elif isinstance(Exp, OPLowercase):
-        cad = resolverCadena(Exp.term1, tablaSimbolos)
-        if cad == None:
-            return None
+
+        global yalowercase
+        if not yalowercase:
+            yalowercase = True
+            temp2 = crearTemporal()
+            temp3 = crearTemporal()
+            temp4 = crearTemporal()
+            salto0 = crearSalto()
+            salto1 = crearSalto()
+            salto2 = crearSalto()
+
+            y = temp2 + siwal + getH("")
+            y += temp3 + siwal + getP("+1")
+            y += temp3 + siwal + getStack(temp3) + fincomando
+            y += iniciarSalto(salto0)
+            y += temp4 + siwal + getHeap(temp3) + fincomando
+            y += crearIf(temp4 + " == -1", salto2)
+            y += crearIf(temp4 + " < 65", salto1)
+            y += crearIf(temp4 + " > 90", salto1)
+            y += temp4 + siwal + temp4 + " + 32" + fincomando
+            y += iniciarSalto(salto1)
+            y += getHeap("H") + siwal + temp4 + fincomando
+            y += aumentarH(1)
+            y += tempmasmas(temp3)
+            y += iniciarGoto(salto0)
+            y += iniciarSalto(salto2)
+            y += getHeap("H") + siwal + " -1" + fincomando
+            y += aumentarH(1)
+            y += getStack("P") + siwal + temp2 + fincomando
+            y += "return" + fincomando
+
+            meterfuncion("lowercase", y)
+
+        temp1 = resolverCadena(Exp.term1, tablaSimbolos)
+
+        temp6 = crearTemporal()
+        temp7 = crearTemporal()
+
+        x = temp6 + siwal + getP("+" + str(contavars)) #cambio de ambito (?)
+        x += tempmasmas(temp6)
+        x += getStack(temp6) + siwal + verificarT(temp1) + fincomando
+        x += aumentarP(contavars)
+        x += "lowercase()" + fincomando
+        x += temp7 + siwal + getStack("P") + fincomando
+        x += disminuirP(contavars)
+        meteraTraduccion(x)
         
-        return str(cad).lower()
+        return temp7
     elif isinstance(Exp, OPUppercase):
-        cad = resolverCadena(Exp.term1, tablaSimbolos)
-        if cad == None:
-            return None
+
+        global yauppercase
+        if not yauppercase:
+            yauppercase = True
+            temp2 = crearTemporal()
+            temp3 = crearTemporal()
+            temp4 = crearTemporal()
+            salto0 = crearSalto()
+            salto1 = crearSalto()
+            salto2 = crearSalto()
+
+            y = temp2 + siwal + getH("")
+            y += temp3 + siwal + getP("+1")
+            y += temp3 + siwal + getStack(temp3) + fincomando
+            y += iniciarSalto(salto0)
+            y += temp4 + siwal + getHeap(temp3) + fincomando
+            y += crearIf(temp4 + " == -1", salto2)
+            y += crearIf(temp4 + " < 97", salto1)
+            y += crearIf(temp4 + " > 122", salto1)
+            y += temp4 + siwal + temp4 + " - 32" + fincomando
+            y += iniciarSalto(salto1)
+            y += getHeap("H") + siwal + temp4 + fincomando
+            y += aumentarH(1)
+            y += tempmasmas(temp3)
+            y += iniciarGoto(salto0)
+            y += iniciarSalto(salto2)
+            y += getHeap("H") + siwal + " -1" + fincomando
+            y += aumentarH(1)
+            y += getStack("P") + siwal + temp2 + fincomando
+            y += "return" + fincomando
+
+
+            meterfuncion("uppercase", y)
+
+        temp1 = resolverCadena(Exp.term1, tablaSimbolos)
+                
+        temp6 = crearTemporal()
+        temp7 = crearTemporal()
+
+        x = temp6 + siwal + getP("+" + str(contavars)) #cambio de ambito (?)
+        x += tempmasmas(temp6)
+        x += getStack(temp6) + siwal + verificarT(temp1) + fincomando
+        x += aumentarP(contavars)
+        x += "uppercase()" + fincomando
+        x += temp7 + siwal + getStack("P") + fincomando
+        x += disminuirP(contavars)
+        meteraTraduccion(x)
         
-        return str(cad).upper()
+        return temp7
     elif isinstance(Exp, OPMergeString):
         exp1 = resolverCadena(Exp.term1, tablaSimbolos)
         if isinstance(Exp.term2, OPNum):

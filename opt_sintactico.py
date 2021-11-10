@@ -79,13 +79,18 @@ def p_llamadametodo(t):
 
 def p_metodo(t):
     '''METODO : func id parentesisa parentesisc llavesa INSTRUCCIONES return puntocoma llavesc'''
-    listafinal.append(exp.Metodo(t[2], listaexp))
-    listaexp.clear()
+    global listaexp
+    x = exp.Metodo(t[2], listaexp)
+    listafinal.append(x)
+    listaexp = []
 
 def p_metodo2(t):
     '''METODO : func main parentesisa parentesisc llavesa INSTRUCCIONES llavesc '''
-    listafinal.append(exp.Metodo(t[2], listaexp))
-    listaexp.clear()
+    global listaexp
+    x = exp.Metodo(t[2], listaexp)
+    listafinal.append(x)
+    listaexp= []
+
 
 
 #  ----------------------------------------- OTROS --------------------------------------------------
@@ -163,18 +168,17 @@ def p_neg(t):
 
 #  ----------------------------------------- FUNCSS --------------------------------------------------
 #-----------------------------------------------------------------------------------------------------
-def fighting2(texto):
+def opt_sintactico(texto):
 
     fighting(texto)
     parser = yacc.yacc()
     result = parser.parse(texto)
     print(result)
     print('--------------------------------------------------------------------------------------------')
-    global listaexp
-    print(listaexp)
     global listafinal
     print(listafinal)
-    return
+    
+    return listafinal
 
 
 mitexto = '''func imprimir() {
