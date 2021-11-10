@@ -144,12 +144,110 @@ def procesarInstrucciones(ast, tablaSimbolos : cst.TablaSimbolos):
         elif isinstance(instruccion, Declaracion): intDeclaracion(instruccion, tablaSimbolos)
         elif isinstance(instruccion, Scope): intScope(instruccion, tablaSimbolos)
 
+        elif isinstance(instruccion, FIFuni): intFIFuni(instruccion, tablaSimbolos)
+        elif isinstance(instruccion, FIF): intFIF(instruccion, tablaSimbolos)
+        elif isinstance(instruccion, FElseIF): intFElseIF(instruccion, tablaSimbolos)
+        elif isinstance(instruccion, FELSE): intFELSE(instruccion, tablaSimbolos)
+
+
+
 # -------------------------------------------------------------------------
 # IMPRESION ---------------------------------------------------------------
 # -------------------------------------------------------------------------
 # region impresion -- revisada
 def intImpresion(instr, tablaSimbolos: cst.TablaSimbolos):
     print('impresion')
+    aux = ""
+    global funcionusada
+    global saltotrue
+    global saltofalse
+    global saltorest
+
+    for instruccion in instr.texto:
+        # tal vez le tenga que poner un if al res, pero una crisis a la vez xd
+        funcionusada = 0
+
+        res = resolverNumerica(instruccion, tablaSimbolos)
+        global usandovars
+        print('USANDOVARS: ', usandovars, ' CONTAVARS -> ', contavars)
+
+        if funcionusada == 0: #numerica
+            var = verificarT(res)
+            txt = "\"%d\", int(" + var  + ")"
+            if "." in str(res) or "t" in str(res): 
+                txt = "\"%f\", " + var 
+            aux += "fmt.Printf(" + txt + ");\n" 
+        elif funcionusada == 1: #strings
+            var = verificarT(res)
+
+            global yaprintstring
+            if not yaprintstring:
+                yaprintstring = True
+
+                temp1 = crearTemporal()
+                temp2 = crearTemporal()
+                temp3 = crearTemporal()
+
+                salto1 = crearSalto()
+                salto2 = crearSalto()
+                y = ""
+
+                y += temp1 + siwal+ getP("+1")
+                y += temp2 + siwal + getStack(temp1) + fincomando  #pos en h del str temp               
+                y += iniciarSalto(salto1) 
+                y += temp3 + siwal + getHeap(temp2) + fincomando
+                y += crearIf(temp3 + " == -1", salto2)
+                y += "fmt.Printf(\"%c\", int(" + temp3 +"))" + fincomando
+                y += tempmasmas(temp2)
+                y += iniciarGoto(salto1)
+                y += iniciarSalto(salto2)
+                y += "return" + fincomando
+
+                meterfuncion("imprimir", y)
+
+
+            temp5 = crearTemporal()
+            temp6 = crearTemporal()
+            
+            aux += temp5 + siwal + getP("+" + str(contavars))
+            aux += tempmasmas(temp5)
+            aux += getStack(temp5) + siwal + var + fincomando
+            aux += aumentarP(contavars)
+            aux += "imprimir()" + fincomando
+            aux += temp6 + siwal + getStack("P") + fincomando
+            aux += disminuirP(contavars)
+        elif funcionusada == 2: #bools
+            var = verificarT(res)
+
+            if saltofalse == "" or saltotrue == "":
+                saltotrue = crearSalto()
+                saltofalse = crearSalto()
+                saltorest = crearSalto()
+
+            if var == False or 'alse' in var:
+                var = "0"
+            elif var == True or 'rue' in var:
+                var = "1"
+
+            if usandovars:
+                aux += crearIf(var + " == 1", saltotrue)
+                aux += iniciarGoto(saltofalse)
+
+            aux += iniciarSalto(saltotrue)
+            aux += meterPalabra("true")
+            aux += iniciarGoto(saltorest)
+            aux += iniciarSalto(saltofalse)
+            aux += meterPalabra("false")
+            aux += iniciarSalto(saltorest)
+            
+        elif funcionusada == 3: #nothing
+            aux += meterPalabra('nil')
+
+        instruccionesencero()
+        saltofalse = ""
+        saltotrue = ""
+           
+    meteraTraduccion(aux)   
     
 
 def intImpresionLN(instr, tablaSimbolos : cst.TablaSimbolos):
@@ -305,6 +403,7 @@ def intScope(instr: Scope, tablaSimbolos : cst.TablaSimbolos):
         simbolo = cst.NodoSimbolo(asignacion.nombre[0].id, tipo, ambito, aux.posicion)
         simbolo.nota = 'Actualizado'
         tablaSimbolos.actualizar(simbolo)
+        borrardeTabla(aux)
         añadiraTabla(simbolo)
 
         x = ""
@@ -353,7 +452,7 @@ def intScope(instr: Scope, tablaSimbolos : cst.TablaSimbolos):
         if tipo == "Int64" or tipo == "Float64" or funcionusada == 0:
             x += getStack(posicion) + siwal + verificarT(valor) + fincomando        
         elif tipo == "Bool" or funcionusada == 2 :
-            print('-->', valor)
+            print('val-->', valor)
             if valor == "False" or valor == "false" or valor == False:
                 valor = 0
             elif valor == "True" or valor == "true" or valor == True:
@@ -392,10 +491,164 @@ def intScope(instr: Scope, tablaSimbolos : cst.TablaSimbolos):
 # endregion
 
 # ------------------------------------------------------------------------- 
+# CONDICIONALES -----------------------------------------------------------
+# ------------------------------------------------------------------------- 
+
+def intFIF(instr, tablaSimbolos : cst.TablaSimbolos):
+    print('IF')
+
+    global pilaentornos
+    global saltotrue
+    global saltofalse
+    global saltorest
+
+    pilaentornos.append('if')
+    print('oplog', instr.oplog)
+    print('instruccionesv : ', instr.instruccionesv)
+    print('instruccionesf : ', instr.instruccionesf)
+
+    global ts_global
+    ts_local = ts_global
+    aux = ""
+
+    tempdecisivo = resolverBooleana(instr.oplog, tablaSimbolos)
+    if saltofalse == "" or saltotrue == "":
+        saltotrue = crearSalto()
+        saltofalse = crearSalto()
+        saltorest = crearSalto()
+
+    truetemp = saltotrue
+    falsetemp = saltofalse
+    resttemp = saltorest
+
+    aux += iniciarSalto(truetemp)    
+    #acá resuelvo las instrucciones si son true
+    aux += metercomentario('iniciando if true')
+    meteraTraduccion(aux)
+    procesarInstrucciones(instr.instruccionesv, ts_local)
+
+    aux = iniciarGoto(resttemp)
+    aux += iniciarSalto(falsetemp)
+    #acá resuelvo las instrucciones si son true
+    aux += metercomentario('iniciando if false')
+    meteraTraduccion(aux)
+    procesarInstrucciones([instr.instruccionesf], ts_local)
+
+    aux = metercomentario('fin de if')
+    aux += iniciarSalto(resttemp)
+    
+    meteraTraduccion(aux)
+    pilaentornos.pop()
+
+def intFElseIF(instr, tablaSimbolos : cst.TablaSimbolos):
+    print('elif')
+
+    global pilaentornos
+    global saltotrue
+    global saltofalse
+    global saltorest
+
+    pilaentornos.append('elif')
+    print('oplog', instr.oplog)
+    print('instrucciones : ', instr.instruccionesv)
+    print('instruccionesf : ', instr.instruccionesf)
+
+    global ts_global
+    ts_local = ts_global
+    aux = ""
+
+    tempdecisivo = resolverBooleana(instr.oplog, tablaSimbolos)
+    if saltofalse == "" or saltotrue == "":
+        saltotrue = crearSalto()
+        saltofalse = crearSalto()
+        saltorest = crearSalto()
+
+    truetemp = saltotrue
+    falsetemp = saltofalse
+    resttemp = saltorest
+
+    aux += iniciarSalto(truetemp)    
+    #acá resuelvo las instrucciones si son true
+    aux += metercomentario('iniciando elseif true')
+    meteraTraduccion(aux)
+    procesarInstrucciones(instr.instruccionesv, ts_local)
+
+    aux = iniciarGoto(resttemp)
+    aux += iniciarSalto(falsetemp)
+    #acá resuelvo las instrucciones si son true
+    aux += metercomentario('iniciando elseif false')
+    meteraTraduccion(aux)
+    procesarInstrucciones([instr.instruccionesf], ts_local)
+
+    aux = metercomentario('fin de if')
+    aux += iniciarSalto(resttemp)
+    
+    meteraTraduccion(aux)
+    pilaentornos.pop()
+
+def intFELSE(instr, tablaSimbolos : cst.TablaSimbolos):
+    print('else')
+
+    global pilaentornos
+    pilaentornos.append('else')
+
+    global ts_global
+    ts_local = ts_global
+
+    procesarInstrucciones(instr.instrucciones, ts_local)
+
+    pilaentornos.pop()
+
+def intFIFuni(instr, tablaSimbolos : cst.TablaSimbolos):
+    print('if')
+
+    global pilaentornos
+    global saltotrue
+    global saltofalse
+    global saltorest
+    pilaentornos.append('if')
+    print('oplog', instr.oplog)
+    print('instruccionesv : ', instr.instruccionesv)
+    print('instruccionesf : ', instr.instruccionesf)
+
+    global ts_global
+    ts_local = ts_global
+    aux = ""
+
+    tempdecisivo = resolverBooleana(instr.oplog, tablaSimbolos)
+    if saltofalse == "" or saltotrue == "":
+        saltotrue = crearSalto()
+        saltofalse = crearSalto()
+        saltorest = crearSalto()
+
+    truetemp = saltotrue
+    falsetemp = saltofalse
+    resttemp = saltorest
+
+    aux += iniciarSalto(truetemp)    
+    #acá resuelvo las instrucciones si son true
+    aux += metercomentario('iniciando if true')
+    meteraTraduccion(aux)
+    procesarInstrucciones(instr.instruccionesv, ts_local)
+
+    aux = iniciarGoto(resttemp)
+    aux += iniciarSalto(falsetemp)
+    #acá resuelvo las instrucciones si son true
+    aux += metercomentario('iniciando if false')
+    meteraTraduccion(aux)
+    procesarInstrucciones([instr.instruccionesf], ts_local)
+
+    aux = metercomentario('fin de if')
+    aux += iniciarSalto(resttemp)
+    
+    meteraTraduccion(aux)
+    pilaentornos.pop()
+
+# ------------------------------------------------------------------------- 
 # OPERACIONES -------------------------------------------------------------
 # ------------------------------------------------------------------------- 
 
-
+# region operaciones - revisada
 def resolverNumerica(Exp, tablaSimbolos: cst.TablaSimbolos):
     global smas
     global smenos
@@ -1154,7 +1407,7 @@ def resolverBooleana(Exp, tablaSimbolos: cst.TablaSimbolos):
                 w = -int(p)  
                 exp2 = w  
 
-            return exp1 > exp2
+            return True
         elif Exp.operador == LOGICA.MENORQUE :
             x = ""
             if saltofalse == "" or saltotrue == "":
@@ -1184,8 +1437,7 @@ def resolverBooleana(Exp, tablaSimbolos: cst.TablaSimbolos):
                 w = -int(p)  
                 exp2 = w  
 
-
-            return exp1 < exp2
+            return True
         elif Exp.operador == LOGICA.MAYORIWAL :
             x = ""
             if saltofalse == "" or saltotrue == "":
@@ -1216,8 +1468,7 @@ def resolverBooleana(Exp, tablaSimbolos: cst.TablaSimbolos):
                 w = -int(p)  
                 exp2 = w  
 
-
-            return exp1 >= exp2
+            return True
         elif Exp.operador == LOGICA.MENORIWAL : 
             x = ""
             if saltofalse == "" or saltotrue == "":
@@ -1248,8 +1499,7 @@ def resolverBooleana(Exp, tablaSimbolos: cst.TablaSimbolos):
                 w = -int(p)  
                 exp2 = w  
 
-
-            return exp1 <= exp2
+            return True
         elif Exp.operador == LOGICA.IWAL : 
             x = ""
 
@@ -1479,6 +1729,7 @@ def resolverBooleana(Exp, tablaSimbolos: cst.TablaSimbolos):
             return None
         return resolverNumerica(Exp, tablaSimbolos)
 
+#endregion
 
 # ------------------------------------------------------------------------- 
 # AUXILIARES --------------------------------------------------------------
@@ -1506,6 +1757,10 @@ def siExisteHardcore(nombre, tablaSimbolos: cst.TablaSimbolos):
 
 def tipoEnTabla(posicion, tablaSimbolos: cst.TablaSimbolos):
     return tablaSimbolos.obtenerTipo(posicion)
+
+def borrardeTabla(simbolo: cst.NodoSimbolo):
+    global lista_simbolos
+    lista_simbolos.remove(simbolo)
 
 def añadiraTabla(simbolo: cst.NodoSimbolo):
     global lista_simbolos
@@ -1588,6 +1843,9 @@ def meterPalabra(texto):
         ascii = ord(i)
         aux += "fmt.Printf(\"%c\"," + str(ascii) +");\n"
     return aux
+
+def metercomentario(texto):
+    return "//" + texto + "\n"
 
 # BOOLS
 def verboolastring(exp):
