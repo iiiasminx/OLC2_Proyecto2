@@ -1,6 +1,7 @@
 # importo todo de todos lados
 from sys import exc_info, getsizeof
 from a_lexico import fighting, tokens
+from interprete import intAsignacionAtributosStruct
 import objetos as cst
 from operaciones import *
 from instrucciones  import *
@@ -36,7 +37,7 @@ fincomando = ";\n"
 smas = " + "
 smenos = " - "
 
-#funcionusada 0 binaria, 1 strings, 2 bools, 3 nothing
+#funcionusada 0 binaria, 1 strings, 2 bools, 3 nothing, 4 array
 funcionusada = 0
 
 #funciones extra
@@ -53,6 +54,7 @@ contavars = 0   #las vars del todo
 saltotrue = ""
 saltofalse = ""
 saltorest = ""
+ultimorest = ""
 usandologica = [2] # pila de cosos
 comparandocadenas = False
 
@@ -79,6 +81,8 @@ def compilando(texto):
     traducciontemporal = ""  
     global tradfunciones
     tradfunciones = ""
+    global ultimorest
+    ultimorest = crearSalto()
 
     traduccion = """package main\nimport ("fmt")\n"""
     traduccion += "var stack [300000]float64\nvar heap [300000]float64\n"
@@ -114,6 +118,8 @@ def compilando(texto):
     traduccion += "func main() {\n"
     traduccion += "P = 0; H = 0;\n\n"
     traduccion += traducciontemporal
+    traduccion += iniciarGoto(ultimorest)
+    traduccion += iniciarSalto(ultimorest)
     traduccion += "}"  
 
     paquete.traduccion = traduccion  
@@ -148,6 +154,8 @@ def procesarInstrucciones(ast, tablaSimbolos : cst.TablaSimbolos):
         elif isinstance(instruccion, FIF): intFIF(instruccion, tablaSimbolos)
         elif isinstance(instruccion, FElseIF): intFElseIF(instruccion, tablaSimbolos)
         elif isinstance(instruccion, FELSE): intFELSE(instruccion, tablaSimbolos)
+
+        elif isinstance(instruccion, FWhile): intFWhile(instruccion, tablaSimbolos)
 
 
 
@@ -238,10 +246,15 @@ def intImpresion(instr, tablaSimbolos: cst.TablaSimbolos):
             aux += iniciarGoto(saltorest)
             aux += iniciarSalto(saltofalse)
             aux += meterPalabra("false")
-            aux += iniciarSalto(saltorest)
-            
+            aux += iniciarSalto(saltorest)      
         elif funcionusada == 3: #nothing
             aux += meterPalabra('nil')
+        elif funcionusada == 4: #array
+            var = verificarT(res)
+            txt = "\"%d\", int(" + var  + ")"
+            if "." in str(res) or "t" in str(res): 
+                txt = "\"%f\", " + var 
+            aux += "fmt.Printf(" + txt + ");\n"
 
         instruccionesencero()
         saltofalse = ""
@@ -337,6 +350,12 @@ def intImpresionLN(instr, tablaSimbolos : cst.TablaSimbolos):
             
         elif funcionusada == 3: #nothing
             aux += meterPalabra('nil')
+        elif funcionusada == 4: #array
+            var = verificarT(res)
+            txt = "\"%d\", int(" + var  + ")"
+            if "." in str(res) or "t" in str(res): 
+                txt = "\"%f\", " + var 
+            aux += "fmt.Printf(" + txt + ");\n"
 
         instruccionesencero()
         saltofalse = ""
@@ -356,11 +375,15 @@ def intDeclaracion(instr:Asignacion, tablaSimbolos : cst.TablaSimbolos):
 
 def intScope(instr: Scope, tablaSimbolos : cst.TablaSimbolos):
     print('Asignando en scope')
+    print(instr.asignacion.nombre)
+    print(instr.asignacion.valor)
+
     global saltofalse
     global saltotrue
     global saltorest
 
-    ambito = 'local'
+    global pilaentornos
+    ambito = pilaentornos[-1]
     if instr.scope == 'global':
         ambito = 'global'
 
@@ -379,6 +402,9 @@ def intScope(instr: Scope, tablaSimbolos : cst.TablaSimbolos):
         tipo = "Bool"
     elif funcionusada == 3:
         tipo = "Nil"
+    elif funcionusada == 4:
+        tipo = "Array"
+
     
     # si es tipada
     if asignacion.tipo != "":
@@ -481,6 +507,8 @@ def intScope(instr: Scope, tablaSimbolos : cst.TablaSimbolos):
             x += getStack(posicion) + siwal + verificarT(valor) + fincomando
         elif tipo == "None" or tipo == None or funcionusada == 3:
             x += getStack(posicion) + siwal + "0" + fincomando
+        elif tipo == "Array" or tipo == None or funcionusada == 4:
+            x += getStack(posicion) + siwal + verificarT(valor) + fincomando
 
         meteraTraduccion(x)
         global contavars
@@ -494,6 +522,7 @@ def intScope(instr: Scope, tablaSimbolos : cst.TablaSimbolos):
 # CONDICIONALES -----------------------------------------------------------
 # ------------------------------------------------------------------------- 
 
+# region if - revisada
 def intFIF(instr, tablaSimbolos : cst.TablaSimbolos):
     print('IF')
 
@@ -642,6 +671,47 @@ def intFIFuni(instr, tablaSimbolos : cst.TablaSimbolos):
     aux += iniciarSalto(resttemp)
     
     meteraTraduccion(aux)
+    pilaentornos.pop()
+
+# endregion
+
+def intFWhile(instr : FWhile, tablaSimbolos : cst.TablaSimbolos):
+    print('while')
+
+    global pilaentornos
+    global saltofalse
+    global saltorest
+    global saltotrue
+
+    pilaentornos.append('while')
+    print('oplog', instr.oplog)
+    print('instrucciones : ', instr.instrucciones)
+
+    global ts_global
+    ts_local = ts_global
+
+    saltowhile = crearSalto() #este es el salto inicial inicial
+
+    z = metercomentario("iniciando while")
+    z += iniciarSalto(saltowhile)
+    meteraTraduccion(z)
+
+    tempdecisivo = resolverBooleana(instr.oplog, tablaSimbolos)
+    if saltofalse == "" or saltotrue == "":
+        saltotrue = crearSalto()
+        saltofalse = crearSalto()
+        saltorest = crearSalto()
+
+    truetemp = saltotrue
+    falsetemp = saltofalse
+    resttemp = saltorest
+    z = iniciarSalto(truetemp)
+    meteraTraduccion(z)
+    procesarInstrucciones(instr.instrucciones, ts_local)
+    z = iniciarGoto(saltowhile)
+    z += iniciarSalto(falsetemp)
+    meteraTraduccion(z)       
+
     pilaentornos.pop()
 
 # ------------------------------------------------------------------------- 
@@ -873,9 +943,12 @@ def resolverNumerica(Exp, tablaSimbolos: cst.TablaSimbolos):
             elif tipo == "Nil":
                 print('es-nil ', 'usandovars: ', usandovars, ' funcionusada ', funcionusada)
                 funcionusada = 3                
-            else:
+            elif tipo == "Bool":
                 print('es-bool ', 'usandovars: ', usandovars, ' funcionusada ', funcionusada)
                 funcionusada = 2
+            elif tipo == "Array":
+                print('es-array ', 'usandovars: ', usandovars, ' funcionusada ', funcionusada)
+                funcionusada = 4
             return z                
         else: 
             print('FALLA EN ID')
@@ -888,27 +961,48 @@ def resolverNumerica(Exp, tablaSimbolos: cst.TablaSimbolos):
     elif isinstance(Exp, OPType):
         return ""
     elif isinstance(Exp, list):
-        #print('Acá hay un arreglol')
-        aux = []
+        print('Acá hay un arreglo')        
+        x = ""
+
+        tamaño = len(Exp)      
+
+        if isinstance(Exp[0], OPNothing):
+            tamaño = 0
+
+        temp0 = crearTemporal()
+        temp1 = crearTemporal()
+
+        x += temp0 + siwal + getH("") # donde empieza el array
+        x += getHeap("H") + siwal + str(tamaño) + fincomando #heap de donde empieza = el tamaño
+        x += temp1 + siwal + aumentartemp(temp0, str(1)) #donde meto el primer cosito  t1 = h+1
+        x += aumentarH(tamaño + 1) + "\n"#reservando el tamaño del arreglo
+
+        #en teoría, h ya es x para este arreglo, no importa        
         for term in Exp:
             if isinstance(term, OPNothing):
-                return aux
+                break
 
-            if isinstance(term, OPID):
-                aux.append(term.id)
-                continue
-        
-            x = resolverNumerica(term, tablaSimbolos)
-            aux.append(x)
-        return aux
+            term = resolverNumerica(term, tablaSimbolos)
+
+            x += getHeap(temp1) + siwal + verificarT(term) + fincomando
+            x += tempmasmas(temp1)
+
+        meteraTraduccion(x)
+        funcionusada = 4
+        print('terminando arreglo')
+        return temp0
     elif isinstance(Exp, LlamadaArr):
+        print('Acá hay una llamada arr')
+        print(Exp.nombre)
+        print(Exp.inds)
+
         arr_indices = []
         contadimensiones = 0
         for indice in Exp.inds:
             x = resolverNumerica(indice, tablaSimbolos)
             print (tipoVariable(x), ' , ', x)
 
-            if tipoVariable(x) != 'Int64':
+            if funcionusada != 0:
                 errordeTipos('Asignacion de Array')
                 return None
 
@@ -918,22 +1012,39 @@ def resolverNumerica(Exp, tablaSimbolos: cst.TablaSimbolos):
         arr = siExisteHardcore(Exp.nombre, tablaSimbolos)
         if arr == False or not arr:
             return None
+        funcionusada = 4
+
+        temp8 = crearTemporal()
+        temp3 = crearTemporal()
+        temp4 = crearTemporal()
+        z = temp8 + siwal + getStack(str(arr.posicion)) + fincomando
+        usandovars = usandovars +1
+        meteraTraduccion(z) 
         
-        placeholder = ""
         try:
-            if contadimensiones == 0: return errordeTipos('Asignación a arreglo')
+            if contadimensiones == 0: 
+                checarIndice("-1", "0", "0")                
+                return errordeTipos('Asignación a arreglo')
             elif contadimensiones == 1: 
-                placeholder = arr.valor[arr_indices[0]]
-                return arr.valor[arr_indices[0]]
+                x = metercomentario("arr de una dimensión")
+                x += checarIndice(str(arr_indices[0]), temp8)
+                x += temp3 + siwal + aumentartemp(temp8, str(arr_indices[0]))
+                x += tempmasmas(temp3)
+                x += temp4 + siwal + getHeap(temp3) + fincomando
+                meteraTraduccion(x)
+                return temp4
             elif contadimensiones == 2:
-                placeholder = arr.valor[arr_indices[0]][arr_indices[1]]
-                return arr.valor[arr_indices[0]][arr_indices[1]]
+                x = metercomentario("arr de dos dimensiones")
+                #placeholder = arr.valor[arr_indices[0]][arr_indices[1]]
+                #return arr.valor[arr_indices[0]][arr_indices[1]]
             elif contadimensiones == 3: 
-                placeholder = arr.valor[arr_indices[0]][arr_indices[1]][arr_indices[2]]
-                return arr.valor[arr_indices[0]][arr_indices[1]][arr_indices[2]]
+                pass
+                #placeholder = arr.valor[arr_indices[0]][arr_indices[1]][arr_indices[2]]
+                #return arr.valor[arr_indices[0]][arr_indices[1]][arr_indices[2]]
         except Exception as e:
             print(e)
-            return errorEquis('Asignación a arreglo', str(e))
+            return errorEquis('Llamada a valor de arreglo', str(e))
+
     elif isinstance(Exp, FForRangoNum):
         exp1 = resolverNumerica(Exp.term1, tablaSimbolos)
         exp2 = resolverNumerica(Exp.term2, tablaSimbolos) 
@@ -1344,6 +1455,7 @@ def resolverBooleana(Exp, tablaSimbolos: cst.TablaSimbolos):
     global usandologica
     global comparandocadenas
     global contavars
+    global yacomparestrings
     funcionusada = 2
 
     if isinstance(Exp, OPLogica): 
@@ -1516,7 +1628,7 @@ def resolverBooleana(Exp, tablaSimbolos: cst.TablaSimbolos):
 
             if comparandocadenas:
                 if not yacomparestrings:
-
+                    yacomparestrings = True
                     temp2 = crearTemporal()
                     temp3 = crearTemporal()
                     temp4 = crearTemporal()
@@ -1686,36 +1798,6 @@ def resolverBooleana(Exp, tablaSimbolos: cst.TablaSimbolos):
         return True
     elif isinstance(Exp, OPNum):
         return Exp.val
-    elif isinstance(Exp, LlamadaArr):
-        print("llamando arreglo")
-        arr_indices = []
-        contadimensiones = 0
-        for indice in Exp.inds:
-            x = resolverNumerica(indice, tablaSimbolos)
-            print (tipoVariable(x), ' , ', x)
-
-            if tipoVariable(x) != 'Int64':
-                errordeTipos('Asignacion de Array')
-                return None
-
-            arr_indices.append(x)
-            contadimensiones += 1
-
-        arr = siExisteHardcore(Exp.nombre, tablaSimbolos)
-        if arr == False or not arr:
-            return None
-        
-        try:
-            if contadimensiones == 0: return errordeTipos('Asignación a arreglo')
-            elif contadimensiones == 1: 
-                return arr.valor[arr_indices[0]]
-            elif contadimensiones == 2:
-                return arr.valor[arr_indices[0]][arr_indices[1]]
-            elif contadimensiones == 3: 
-                return arr.valor[arr_indices[0]][arr_indices[1]][arr_indices[2]]
-        except Exception as e:
-            print(e)
-            return errorEquis('Asignación a arreglo', str(e))
     elif isinstance(Exp, OPCadena):
         temp, trad = stringaHeap(Exp.id)
         meteraTraduccion(trad)
@@ -1847,6 +1929,27 @@ def meterPalabra(texto):
 def metercomentario(texto):
     return "//" + texto + "\n"
 
+# ARRAY
+def checarIndice(indice, tempinicial):
+    temp0 = crearTemporal()
+    temp1 = crearTemporal()
+    saltofalso = crearSalto()
+    saltoverdadero = crearSalto()
+    global ultimorest
+    x = ""
+    x += metercomentario("viendo indices de array")
+    x += temp1 + siwal + getHeap(tempinicial) + fincomando
+    x += temp0 + siwal + indice + fincomando
+    x += crearIf(temp0 + " < 0", saltofalso)
+    x += crearIf(temp0 + " > " + temp1, saltofalso)
+    x += iniciarGoto(saltoverdadero)
+    x += iniciarSalto(saltofalso)
+    x += meterPalabra("BoundsError")
+    x += iniciarGoto(ultimorest)
+    x += iniciarSalto(saltoverdadero)
+    x += metercomentario("fin de checar indices")
+    return x
+
 # BOOLS
 def verboolastring(exp):
     var = verificarT(exp)
@@ -1942,6 +2045,12 @@ def tempmasmas(temp):
 
 def tempmenosmenos(temp):
     return temp + " = " + temp + "-1;\n"    
+
+def aumentartemp(temp: str, unidades:str):
+    return temp + " + " + unidades + fincomando
+
+def disminuirtemp(temp: str, unidades:int):
+    return temp + " - " + str(unidades) + fincomando
 
 # P 
 def aumentarP(unidades: int):
