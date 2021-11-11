@@ -37,7 +37,7 @@ fincomando = ";\n"
 smas = " + "
 smenos = " - "
 
-#funcionusada 0 binaria, 1 strings, 2 bools, 3 nothing, 4 array
+#funcionusada 0 binaria, 1 strings, 2 bools, 3 nothing, 4 array, 5 llamadaArr
 funcionusada = 0
 
 #funciones extra
@@ -55,8 +55,12 @@ saltotrue = ""
 saltofalse = ""
 saltorest = ""
 ultimorest = ""
+
 usandologica = [2] # pila de cosos
 comparandocadenas = False
+gotos = []
+inicioloop = ""
+findeloop = ""
 
 def compilando(texto):
     # seteando todo como debe ser :v
@@ -122,7 +126,9 @@ def compilando(texto):
     traduccion += iniciarSalto(ultimorest)
     traduccion += "}"  
 
-    paquete.traduccion = traduccion  
+    trad = checarLabelsNoUsadas(traduccion)
+
+    paquete.traduccion = trad  
     paquete.errores_lexicos =lexicos
     paquete.tabla_simbolos = lista_simbolos
     paquete.listasemanticos = listasemanticos
@@ -156,6 +162,11 @@ def procesarInstrucciones(ast, tablaSimbolos : cst.TablaSimbolos):
         elif isinstance(instruccion, FELSE): intFELSE(instruccion, tablaSimbolos)
 
         elif isinstance(instruccion, FWhile): intFWhile(instruccion, tablaSimbolos)
+        elif isinstance(instruccion, SBreak): intBreak(instruccion, tablaSimbolos)
+        elif isinstance(instruccion, SContinue): intContinue(instruccion, tablaSimbolos)
+        elif isinstance(instruccion, FFor): intFFor(instruccion, tablaSimbolos)
+
+
 
 
 
@@ -255,6 +266,17 @@ def intImpresion(instr, tablaSimbolos: cst.TablaSimbolos):
             if "." in str(res) or "t" in str(res): 
                 txt = "\"%f\", " + var 
             aux += "fmt.Printf(" + txt + ");\n"
+        elif funcionusada == 5: # llamadaArray
+            var = verificarT(res)
+            nuevo = crearTemporal()
+            aux += nuevo + siwal + getHeap(var) + fincomando
+
+            txt = "\"%d\", int(" + nuevo  + ")"
+            if "." in str(res) or "t" in str(res): 
+                txt = "\"%f\", " + nuevo 
+            aux += "fmt.Printf(" + txt + ");\n"
+
+
 
         instruccionesencero()
         saltofalse = ""
@@ -262,7 +284,6 @@ def intImpresion(instr, tablaSimbolos: cst.TablaSimbolos):
            
     meteraTraduccion(aux)   
     
-
 def intImpresionLN(instr, tablaSimbolos : cst.TablaSimbolos):
     print('impresionLN')
     aux = ""
@@ -346,8 +367,7 @@ def intImpresionLN(instr, tablaSimbolos : cst.TablaSimbolos):
             aux += iniciarGoto(saltorest)
             aux += iniciarSalto(saltofalse)
             aux += meterPalabra("false")
-            aux += iniciarSalto(saltorest)
-            
+            aux += iniciarSalto(saltorest)           
         elif funcionusada == 3: #nothing
             aux += meterPalabra('nil')
         elif funcionusada == 4: #array
@@ -355,6 +375,15 @@ def intImpresionLN(instr, tablaSimbolos : cst.TablaSimbolos):
             txt = "\"%d\", int(" + var  + ")"
             if "." in str(res) or "t" in str(res): 
                 txt = "\"%f\", " + var 
+            aux += "fmt.Printf(" + txt + ");\n"
+        elif funcionusada == 5: # llamadaArray
+            var = verificarT(res)
+            nuevo = crearTemporal()
+            aux += nuevo + siwal + getHeap(var) + fincomando
+
+            txt = "\"%d\", int(" + nuevo  + ")"
+            if "." in str(res) or "t" in str(res): 
+                txt = "\"%f\", " + nuevo 
             aux += "fmt.Printf(" + txt + ");\n"
 
         instruccionesencero()
@@ -383,14 +412,94 @@ def intScope(instr: Scope, tablaSimbolos : cst.TablaSimbolos):
     global saltorest
 
     global pilaentornos
+    global funcionusada
     ambito = pilaentornos[-1]
     if instr.scope == 'global':
         ambito = 'global'
-
     asignacion = instr.asignacion
-    valor = resolverNumerica(asignacion.valor, tablaSimbolos)
-    global funcionusada
+
+    # CAMBIOS A LA IQUIERDA
+    try: 
+    #si lo que está a la izq es un array 
+        if isinstance(instr.asignacion.nombre, LlamadaArr):
+            print('ARRAY A LA IZQUIERDA')
+            indiceHeap = resolverNumerica(instr.asignacion.nombre, tablaSimbolos) 
+
+            valor = resolverNumerica(asignacion.valor, tablaSimbolos)
+
+            global funcionusada
+            tipo = "Undefined"
+            if funcionusada == 0:
+                tipo = "Numeric"
+            elif funcionusada == 1:
+                tipo = "String"
+            elif funcionusada == 2:
+                tipo = "Bool"
+            elif funcionusada == 3:
+                tipo = "Nil"
+            elif funcionusada == 4:
+                tipo = "Array"
+            elif funcionusada == 5:
+                tipo = "ArrayComponent"
+
+            # si es tipada
+            if asignacion.tipo != "":
+                tipo = asignacion.tipo.id
+                if tipo != tipoVariable(valor):
+                    if tipo == "Int64" and funcionusada == 0:
+                        pass
+                    elif tipo == "Foat64" and funcionusada == 0:
+                        pass
+                    else:
+                        errordeTipos("Declaración de " + asignacion.nombre[0].id)
+                        return ""
+            izquierda = getHeap(verificarT(indiceHeap))
+            x = ""
+            if tipo == "Int64" or tipo == "Float64" or funcionusada == 0:
+                x += izquierda + siwal + verificarT(valor) + fincomando        
+            elif tipo == "Bool" or funcionusada == 2 :
+                print('val-->', valor)
+                if valor == "False" or valor == "false" or valor == False:
+                    valor = 0
+                elif valor == "True" or valor == "true" or valor == True:
+                    valor = 1
+                else: 
+                    valor = verificarT(valor)
+                
+                if saltofalse == "" or saltotrue == "":
+                    saltotrue = crearSalto()
+                    saltofalse = crearSalto()
+                    saltorest = crearSalto()
+                
+                x += metercomentario('inicio -- Para que funcione T.T')
+                x += crearIf("0 != 0", saltofalse)
+                x += iniciarGoto(saltotrue)
+                x += metercomentario('fin -- Para que funcione T.T')
+
+                x += iniciarSalto(saltotrue)
+                x += izquierda + siwal + str(valor) + fincomando  
+                x += iniciarGoto(saltorest)
+                x += iniciarSalto(saltofalse)
+                x += izquierda + siwal + "0" + fincomando
+                x += iniciarSalto(saltorest)
+            elif tipo == "String" or funcionusada == 1 :
+                x += izquierda + siwal + verificarT(valor) + fincomando
+            elif tipo == "None" or tipo == None or funcionusada == 3:
+                x += izquierda + siwal + "0" + fincomando
+            elif tipo == "Array"  or funcionusada == 4:
+                x += izquierda + siwal + verificarT(valor) + fincomando
+            elif tipo == "ArrayComponent"  or funcionusada == 5:
+                tempaux = crearTemporal()
+                x += tempaux + siwal + getHeap(verificarT(valor)) + fincomando
+                x += izquierda + siwal + tempaux + fincomando
+
+            meteraTraduccion(x)
+            return ""         
+    except Exception as ee:
+        errorEquis('Asignación', 'algo x pasó :c')
     
+    # SIN CAMBIOS A LA IQUIERDA
+    valor = resolverNumerica(asignacion.valor, tablaSimbolos)    
     aux = siExiste(asignacion.nombre[0].id, tablaSimbolos)
 
     tipo = "Undefined"
@@ -404,8 +513,9 @@ def intScope(instr: Scope, tablaSimbolos : cst.TablaSimbolos):
         tipo = "Nil"
     elif funcionusada == 4:
         tipo = "Array"
+    elif funcionusada == 5:
+        tipo = "ArrayComponent"
 
-    
     # si es tipada
     if asignacion.tipo != "":
         tipo = asignacion.tipo.id
@@ -458,6 +568,8 @@ def intScope(instr: Scope, tablaSimbolos : cst.TablaSimbolos):
             x += getStack(posicion) + siwal + posenH + fincomando
         elif tipo == "None" or tipo == None or funcionusada == 3:
             x += getStack(posicion) + siwal + "0" + fincomando
+        elif tipo == "Array" or tipo == None or funcionusada == 4:
+            x += getStack(posicion) + siwal + verificarT(valor) + fincomando
 
         meteraTraduccion(x)
         return ""
@@ -502,13 +614,16 @@ def intScope(instr: Scope, tablaSimbolos : cst.TablaSimbolos):
             x += iniciarSalto(saltofalse)
             x += getStack(posicion) + siwal + "0" + fincomando
             x += iniciarSalto(saltorest)
-
         elif tipo == "String" or funcionusada == 1 :
             x += getStack(posicion) + siwal + verificarT(valor) + fincomando
         elif tipo == "None" or tipo == None or funcionusada == 3:
             x += getStack(posicion) + siwal + "0" + fincomando
-        elif tipo == "Array" or tipo == None or funcionusada == 4:
+        elif tipo == "Array"  or funcionusada == 4:
             x += getStack(posicion) + siwal + verificarT(valor) + fincomando
+        elif tipo == "ArrayComponent"  or funcionusada == 5:
+            tempaux = crearTemporal()
+            x += tempaux + siwal + getHeap(verificarT(valor)) + fincomando
+            x += getStack(posicion) + siwal + tempaux + fincomando
 
         meteraTraduccion(x)
         global contavars
@@ -675,6 +790,7 @@ def intFIFuni(instr, tablaSimbolos : cst.TablaSimbolos):
 
 # endregion
 
+# region while for - en proceso
 def intFWhile(instr : FWhile, tablaSimbolos : cst.TablaSimbolos):
     print('while')
 
@@ -685,12 +801,14 @@ def intFWhile(instr : FWhile, tablaSimbolos : cst.TablaSimbolos):
 
     pilaentornos.append('while')
     print('oplog', instr.oplog)
-    print('instrucciones : ', instr.instrucciones)
+    #print('instrucciones : ', instr.instrucciones)
 
     global ts_global
     ts_local = ts_global
 
     saltowhile = crearSalto() #este es el salto inicial inicial
+    global inicioloop
+    inicioloop = saltowhile
 
     z = metercomentario("iniciando while")
     z += iniciarSalto(saltowhile)
@@ -705,14 +823,68 @@ def intFWhile(instr : FWhile, tablaSimbolos : cst.TablaSimbolos):
     truetemp = saltotrue
     falsetemp = saltofalse
     resttemp = saltorest
+    global findeloop
+    findeloop = falsetemp
+    print('SALTOS ', inicioloop , ' , ', findeloop )
+
     z = iniciarSalto(truetemp)
     meteraTraduccion(z)
+
     procesarInstrucciones(instr.instrucciones, ts_local)
+
     z = iniciarGoto(saltowhile)
     z += iniciarSalto(falsetemp)
+    
     meteraTraduccion(z)       
 
     pilaentornos.pop()
+    inicioloop = ""
+    findeloop = ""
+
+def intBreak(instr: SBreak, tablaSimbolos: cst.TablaSimbolos):
+    global inicioloop
+    global findeloop
+    print('CONTINUE ', inicioloop , ' , ', findeloop) 
+
+    if inicioloop == "" or findeloop == "":
+        errorEquis('Break', 'No se encuentra en un loop')
+        return
+
+    x = ""
+    x += metercomentario("Break")
+    x += iniciarGoto(findeloop)
+    meteraTraduccion(x)
+
+def intContinue(instr: SBreak, tablaSimbolos: cst.TablaSimbolos):
+    global inicioloop
+    global findeloop
+    print('CONTINUE ', inicioloop , ' , ', findeloop)    
+
+    if inicioloop == "" or findeloop == "":
+        errorEquis('Continue', 'No se encuentra en un loop')
+        return
+
+    x = ""
+    x += metercomentario("Continue")
+    x += iniciarGoto(inicioloop)
+    meteraTraduccion(x)
+
+def intFFor(instr: FFor, tablaSimbolos : cst.TablaSimbolos):
+
+    print('for')
+
+    global pilaentornos
+    pilaentornos.append('for')
+
+    print('Instrucciones', instr.instrucciones)
+    print('id =', instr.var)
+    #rangoraw = resolverNumerica(instr.rango, tablaSimbolos)
+    print('rangoraw ', instr.rango)
+
+    
+
+
+# endregion
 
 # ------------------------------------------------------------------------- 
 # OPERACIONES -------------------------------------------------------------
@@ -739,7 +911,7 @@ def resolverNumerica(Exp, tablaSimbolos: cst.TablaSimbolos):
     elif isinstance(Exp, OPBinaria): 
         
         print('RESOLVIENDO BINARIA')
-        print(Exp.term1, ' ', Exp.term2)
+        print(Exp.term1, ' ', Exp.operador, ' ' ,Exp.term2)
         if isinstance(Exp.term1, OPCadena) or isinstance(Exp.term2, OPCadena):
             x = resolverCadena(Exp, tablaSimbolos)
             return x
@@ -1015,8 +1187,9 @@ def resolverNumerica(Exp, tablaSimbolos: cst.TablaSimbolos):
         funcionusada = 4
 
         temp8 = crearTemporal()
-        temp3 = crearTemporal()
-        temp4 = crearTemporal()
+        temp9 = crearTemporal()
+        
+        
         z = temp8 + siwal + getStack(str(arr.posicion)) + fincomando
         usandovars = usandovars +1
         meteraTraduccion(z) 
@@ -1027,20 +1200,58 @@ def resolverNumerica(Exp, tablaSimbolos: cst.TablaSimbolos):
                 return errordeTipos('Asignación a arreglo')
             elif contadimensiones == 1: 
                 x = metercomentario("arr de una dimensión")
-                x += checarIndice(str(arr_indices[0]), temp8)
-                x += temp3 + siwal + aumentartemp(temp8, str(arr_indices[0]))
-                x += tempmasmas(temp3)
-                x += temp4 + siwal + getHeap(temp3) + fincomando
+                x += checarIndice(verificarT(arr_indices[0]), temp8)
+                x += temp9 + siwal + aumentartemp(temp8, verificarT(arr_indices[0]))
+                x += tempmasmas(temp9)
+                #x += temp10 + siwal + getHeap(temp9) + fincomando
+
                 meteraTraduccion(x)
-                return temp4
+                funcionusada = 5
+                return temp9
             elif contadimensiones == 2:
+                temp10 = crearTemporal()
+                temp11 = crearTemporal()
+                #temp12 = crearTemporal()
+
                 x = metercomentario("arr de dos dimensiones")
-                #placeholder = arr.valor[arr_indices[0]][arr_indices[1]]
-                #return arr.valor[arr_indices[0]][arr_indices[1]]
+                x += checarIndice(verificarT(arr_indices[0]), temp8)
+                x += temp9 + siwal + aumentartemp(temp8, verificarT(arr_indices[0]))
+                x += tempmasmas(temp9)
+                x += temp10 + siwal + getHeap(temp9) + fincomando
+
+                
+                x += checarIndice(verificarT(arr_indices[1]), temp10)
+                x += temp11 + siwal + aumentartemp(temp10, verificarT(arr_indices[1]))
+                x += tempmasmas(temp11)
+                #x += temp12 + siwal + getHeap(temp11) + fincomando
+
+                meteraTraduccion(x)
+                funcionusada = 5
+                return temp11
             elif contadimensiones == 3: 
-                pass
-                #placeholder = arr.valor[arr_indices[0]][arr_indices[1]][arr_indices[2]]
-                #return arr.valor[arr_indices[0]][arr_indices[1]][arr_indices[2]]
+                temp10 = crearTemporal()
+                temp11 = crearTemporal()
+                temp12 = crearTemporal()
+                temp13 = crearTemporal()
+
+                x = metercomentario("arr de tres dimensiones")
+                x += checarIndice(verificarT(arr_indices[0]), temp8)
+                x += temp9 + siwal + aumentartemp(temp8, verificarT(arr_indices[0]))
+                x += tempmasmas(temp9)
+                x += temp10 + siwal + getHeap(temp9) + fincomando
+
+                x += checarIndice(verificarT(arr_indices[1]), temp10)
+                x += temp11 + siwal + aumentartemp(temp10, verificarT(arr_indices[1]))
+                x += tempmasmas(temp11)
+                x += temp12 + siwal + getHeap(temp11) + fincomando
+
+                x += checarIndice(verificarT(arr_indices[2]), temp12)
+                x += temp13 + siwal + aumentartemp(temp12, verificarT(arr_indices[2]))
+                x += tempmasmas(temp13)
+
+                meteraTraduccion(x)
+                funcionusada = 5
+                return temp13
         except Exception as e:
             print(e)
             return errorEquis('Llamada a valor de arreglo', str(e))
@@ -1456,11 +1667,13 @@ def resolverBooleana(Exp, tablaSimbolos: cst.TablaSimbolos):
     global comparandocadenas
     global contavars
     global yacomparestrings
+    global usandovars
     funcionusada = 2
 
     if isinstance(Exp, OPLogica): 
         print('RESOLVIENDO LOGICA')
         print(Exp.term1, ' ', Exp.term2)
+        permiso = True
 
         if Exp.operador == LOGICA.AND :
             usandologica.append(0)
@@ -1470,6 +1683,21 @@ def resolverBooleana(Exp, tablaSimbolos: cst.TablaSimbolos):
             print('ES UN OR')
 
         exp1 = resolverBooleana(Exp.term1, tablaSimbolos)
+
+        if saltofalse == "" or saltotrue == "":
+            saltotrue = crearSalto()
+            saltofalse = crearSalto()
+            saltorest = crearSalto()
+        elif usandologica[-1] == 0:
+            x = iniciarSalto(saltotrue)
+            meteraTraduccion(x)
+            saltotrue = crearSalto()
+        elif usandologica[-1] == 1:
+            x = iniciarSalto(saltofalse)
+            meteraTraduccion(x)
+            saltofalse = crearSalto()
+
+
         exp2 = resolverBooleana(Exp.term2, tablaSimbolos) 
 
         if exp1  == True or exp1 == False:
@@ -1481,26 +1709,17 @@ def resolverBooleana(Exp, tablaSimbolos: cst.TablaSimbolos):
         if Exp.operador == LOGICA.AND : 
             print('poping ', usandologica[-1], ' ', usandologica)
             usandologica.pop(-1)
+            permiso = False
             return exp1 and exp2
         elif Exp.operador == LOGICA.OR : 
             print('poping ', usandologica[-1], ' ', usandologica)
             usandologica.pop(-1)
+            permiso = False
             return exp1 or exp2
         # si se muestran
-        elif Exp.operador == LOGICA.MAYORQUE :            
-            x = ""
-            if saltofalse == "" or saltotrue == "":
-                saltotrue = crearSalto()
-                saltofalse = crearSalto()
-                saltorest = crearSalto()
-            
-            if usandologica[-1] == 0:
-                x += iniciarSalto(saltotrue)
-                saltotrue = crearSalto()
-            elif usandologica[-1] == 1:
-                x += iniciarSalto(saltofalse)
-                saltofalse = crearSalto()
 
+        if Exp.operador == LOGICA.MAYORQUE :            
+            x = ""
             
             x += crearIf(verboolastring(exp1) + ">" + verboolastring(exp2), saltotrue)
             x += iniciarGoto(saltofalse)
@@ -1522,16 +1741,6 @@ def resolverBooleana(Exp, tablaSimbolos: cst.TablaSimbolos):
             return True
         elif Exp.operador == LOGICA.MENORQUE :
             x = ""
-            if saltofalse == "" or saltotrue == "":
-                saltotrue = crearSalto()
-                saltofalse = crearSalto()
-                saltorest = crearSalto()
-            elif usandologica[-1] == 0:
-                x += iniciarSalto(saltotrue)
-                saltotrue = crearSalto()
-            elif usandologica[-1] == 1:
-                x += iniciarSalto(saltofalse)
-                saltofalse = crearSalto()
 
             x += crearIf(verboolastring(exp1) + "<" + verboolastring(exp2), saltotrue)
             x += iniciarGoto(saltofalse)
@@ -1552,16 +1761,6 @@ def resolverBooleana(Exp, tablaSimbolos: cst.TablaSimbolos):
             return True
         elif Exp.operador == LOGICA.MAYORIWAL :
             x = ""
-            if saltofalse == "" or saltotrue == "":
-                saltotrue = crearSalto()
-                saltofalse = crearSalto()
-                saltorest = crearSalto()
-            elif usandologica[-1] == 0:
-                x += iniciarSalto(saltotrue)
-                saltotrue = crearSalto()
-            elif usandologica[-1] == 1:
-                x += iniciarSalto(saltofalse)
-                saltofalse = crearSalto()
 
             x += crearIf(verboolastring(exp1) + ">=" + verboolastring(exp2), saltotrue)
             x += iniciarGoto(saltofalse)
@@ -1583,17 +1782,6 @@ def resolverBooleana(Exp, tablaSimbolos: cst.TablaSimbolos):
             return True
         elif Exp.operador == LOGICA.MENORIWAL : 
             x = ""
-            if saltofalse == "" or saltotrue == "":
-                saltotrue = crearSalto()
-                saltofalse = crearSalto()
-                saltorest = crearSalto()
-            elif usandologica[-1] == 0:
-                x += iniciarSalto(saltotrue)
-                saltotrue = crearSalto()
-            elif usandologica[-1] == 1:
-                x += iniciarSalto(saltofalse)
-                saltofalse = crearSalto()
-
             x += crearIf(verboolastring(exp1) + "<=" + verboolastring(exp2), saltotrue)
             x += iniciarGoto(saltofalse)
             meteraTraduccion(x)
@@ -1614,17 +1802,6 @@ def resolverBooleana(Exp, tablaSimbolos: cst.TablaSimbolos):
             return True
         elif Exp.operador == LOGICA.IWAL : 
             x = ""
-
-            if saltofalse == "" or saltotrue == "":
-                saltotrue = crearSalto()
-                saltofalse = crearSalto()
-                saltorest = crearSalto()
-            elif usandologica[-1] == 0:
-                x += iniciarSalto(saltotrue)
-                saltotrue = crearSalto()
-            elif usandologica[-1] == 1:
-                x += iniciarSalto(saltofalse)
-                saltofalse = crearSalto()
 
             if comparandocadenas:
                 if not yacomparestrings:
@@ -1703,18 +1880,7 @@ def resolverBooleana(Exp, tablaSimbolos: cst.TablaSimbolos):
             return exp1 == exp2
         elif Exp.operador == LOGICA.DISTINTO :
             x = ""
-
-            if saltofalse == "" or saltotrue == "":
-                saltotrue = crearSalto()
-                saltofalse = crearSalto()
-                saltorest = crearSalto()
-            elif usandologica[-1] == 0:
-                x += iniciarSalto(saltotrue)
-                saltotrue = crearSalto()
-            elif usandologica[-1] == 1:
-                x += iniciarSalto(saltofalse)
-                saltofalse = crearSalto()
-
+            
             if comparandocadenas:
                 if not yacomparestrings:
 
@@ -1771,7 +1937,6 @@ def resolverBooleana(Exp, tablaSimbolos: cst.TablaSimbolos):
                 comparandocadenas = False
                 return Exp.term1.id == Exp.term2.id
             
-            
             x += crearIf(verboolastring(exp1) + "!=" + verboolastring(exp2), saltotrue)
             x += iniciarGoto(saltofalse)
             meteraTraduccion(x)
@@ -1803,6 +1968,101 @@ def resolverBooleana(Exp, tablaSimbolos: cst.TablaSimbolos):
         meteraTraduccion(trad)
         comparandocadenas = True
         return temp
+    elif isinstance(Exp, LlamadaArr):
+        print('Acá hay una llamada arr')
+        print(Exp.nombre)
+        print(Exp.inds)
+
+        arr_indices = []
+        contadimensiones = 0
+        for indice in Exp.inds:
+            x = resolverNumerica(indice, tablaSimbolos)
+            print (tipoVariable(x), ' , ', x)
+
+            if funcionusada != 0:
+                errordeTipos('Asignacion de Array')
+                return None
+
+            arr_indices.append(x)
+            contadimensiones += 1
+
+        arr = siExisteHardcore(Exp.nombre, tablaSimbolos)
+        if arr == False or not arr:
+            return None
+        funcionusada = 4
+
+        temp8 = crearTemporal()
+        temp9 = crearTemporal()
+        
+        
+        z = temp8 + siwal + getStack(str(arr.posicion)) + fincomando
+        usandovars = usandovars +1
+        meteraTraduccion(z) 
+        
+        try:
+            if contadimensiones == 0: 
+                checarIndice("-1", "0", "0")                
+                return errordeTipos('Asignación a arreglo')
+            elif contadimensiones == 1: 
+                temp10 = crearTemporal()
+                x = metercomentario("arr de una dimensión")
+                x += checarIndice(verificarT(arr_indices[0]), temp8)
+                x += temp9 + siwal + aumentartemp(temp8, verificarT(arr_indices[0]))
+                x += tempmasmas(temp9)
+                x += temp10 + siwal + getHeap(temp9) + fincomando
+
+                meteraTraduccion(x)
+                funcionusada = 5
+                return temp10
+            elif contadimensiones == 2:
+                temp10 = crearTemporal()
+                temp11 = crearTemporal()
+                temp12 = crearTemporal()
+
+                x = metercomentario("arr de dos dimensiones")
+                x += checarIndice(verificarT(arr_indices[0]), temp8)
+                x += temp9 + siwal + aumentartemp(temp8, verificarT(arr_indices[0]))
+                x += tempmasmas(temp9)
+                x += temp10 + siwal + getHeap(temp9) + fincomando
+
+                
+                x += checarIndice(verificarT(arr_indices[1]), temp10)
+                x += temp11 + siwal + aumentartemp(temp10, verificarT(arr_indices[1]))
+                x += tempmasmas(temp11)
+                x += temp12 + siwal + getHeap(temp11) + fincomando
+
+                meteraTraduccion(x)
+                funcionusada = 5
+                return temp12
+            elif contadimensiones == 3: 
+                temp10 = crearTemporal()
+                temp11 = crearTemporal()
+                temp12 = crearTemporal()
+                temp13 = crearTemporal()
+                temp14 = crearTemporal()
+
+                x = metercomentario("arr de tres dimensiones")
+                x += checarIndice(verificarT(arr_indices[0]), temp8)
+                x += temp9 + siwal + aumentartemp(temp8, verificarT(arr_indices[0]))
+                x += tempmasmas(temp9)
+                x += temp10 + siwal + getHeap(temp9) + fincomando
+
+                x += checarIndice(verificarT(arr_indices[1]), temp10)
+                x += temp11 + siwal + aumentartemp(temp10, verificarT(arr_indices[1]))
+                x += tempmasmas(temp11)
+                x += temp12 + siwal + getHeap(temp11) + fincomando
+
+                x += checarIndice(verificarT(arr_indices[2]), temp12)
+                x += temp13 + siwal + aumentartemp(temp12, verificarT(arr_indices[2]))
+                x += tempmasmas(temp13)
+                x += temp14 + siwal + getHeap(temp13) + fincomando
+
+                meteraTraduccion(x)
+                funcionusada = 5
+                return temp14
+        except Exception as e:
+            print(e)
+            return errorEquis('Llamada a valor de arreglo', str(e))
     else: 
         print('viendo si se va a los numeros')
         global contabucle
@@ -1904,6 +2164,10 @@ def funcionesencero():
     contavars = 0
     global yacomparestrings 
     yacomparestrings = 0
+    global inicioloop
+    inicioloop = ""
+    global findeloop
+    findeloop = ""
 
 def instruccionesencero():
     global usandovars
@@ -1918,6 +2182,7 @@ def instruccionesencero():
     saltorest = ""
     global comparandocadenas
     comparandocadenas = False
+    
 
 def meterPalabra(texto):
     aux = ""
@@ -1994,6 +2259,27 @@ def meterfuncion(nombre: str,texto:str):
 
 def metercomentario(texto):
     return "// " + texto + "\n" 
+
+def checarLabelsNoUsadas(traduccion: str):
+    global contasaltos
+    global gotos
+
+    for index in range(contasaltos):
+        salto = "L" + str(index)
+        goto = iniciarGoto(salto)
+        goto2 = "{goto " + salto + "}\n"
+        inicio = iniciarSalto(salto)
+
+        x = traduccion.find(goto)
+        y = traduccion.find(inicio)
+        z = traduccion.find(goto2)
+        if x == -1 and y != -1 and z == -1:
+            traduccion = traduccion.replace(inicio, '')
+            print('Salto eliminado: ', salto)
+
+    return traduccion
+
+
 # IF
 def crearIf(comparacion, goto):
     x = "if(" + comparacion + ") {goto " + goto + "}\n"
@@ -2012,10 +2298,14 @@ def getSalto(indice):
     return "L" + str(x)
 
 def iniciarSalto(salto):
-    return salto + ":\n"
+    x = salto + ":\n"
+    return x
 
 def iniciarGoto(salto):
-    return "goto " + salto + ";\n"
+    global gotos
+    x = "goto " + salto + ";\n"
+    gotos.append(x)
+    return x
 
 # TEMPORALES
 def crearTemporal():
