@@ -135,12 +135,14 @@ def reglas4_5(instrucciones = []):
                 
                 indexSalto += 1
 
-            if isinstance(instrucciones[indexSalto +1], sent.InicioGoto) and encontrado:
-                #print('REGLA 4 2/2')
-                instrucciones[contador] = instrucciones[indexSalto +1]
-                regla = "4"
-                reporteOptimizacion.append(cst.Optimizacion("Mirilla", regla, inicial, instrucciones[contador].txt, str(contador)))         
-
+            try:
+                if isinstance(instrucciones[indexSalto +1], sent.InicioGoto) and encontrado:
+                    #print('REGLA 4 2/2')
+                    instrucciones[contador] = instrucciones[indexSalto +1]
+                    regla = "4"
+                    reporteOptimizacion.append(cst.Optimizacion("Mirilla", regla, inicial, instrucciones[contador].txt, str(contador)))         
+            except:
+                break
         elif isinstance(miinstruccion, sent.InicioIf):
             print('IF YA')
             indexSalto = 0
@@ -156,12 +158,15 @@ def reglas4_5(instrucciones = []):
                 
                 indexSalto += 1
 
-            if isinstance(instrucciones[indexSalto +1], sent.InicioGoto) and encontrado:
-                print('REGLA 4 2/2')
-                instrucciones[contador].txt = "if(" + miinstruccion.comparacion.txt + ") {" + instrucciones[indexSalto +1].txt + "}"
-                regla = "5"
-                reporteOptimizacion.append(cst.Optimizacion("Mirilla", regla, inicial, instrucciones[contador].txt, str(contador)))         
-
+            try:
+                print('METIENDO EL TRY')
+                if isinstance(instrucciones[indexSalto +1], sent.InicioGoto) and encontrado:
+                    print('REGLA 4 2/2')
+                    instrucciones[contador].txt = "if(" + miinstruccion.comparacion.txt + ") {" + instrucciones[indexSalto +1].txt + "}"
+                    regla = "5"
+                    reporteOptimizacion.append(cst.Optimizacion("Mirilla", regla, inicial, instrucciones[contador].txt, str(contador)))         
+            except:
+                break
 
         contador += 1
     
