@@ -131,78 +131,6 @@
     <div class="column2">
     </div>
     <div class="column">
-
-
-      <form>
-        <h2>&emsp;Reporte de Optimización</h2>
-        <table class="table table-hover">
-          <thead>
-            <tr>
-              <th scope="col">No.</th>
-              <th scope="col">Descripción</th>
-              <th scope="col">Fila</th>
-              <th scope="col">Columna</th>
-              <th scope="col">Hora</th>
-            </tr>
-          </thead>
-
-          <tbody>
-          </tbody>
-
-        </table>
-
-      </form>
-    </div>
-  </div>
-
-</br></br>
-</br></br>
-</br></br></br>
-</br></br>
-</br></br>
-</br></br>
-</br></br></br>
-</br></br></br></br></br>
-</br></br>
-
-  <div class="row form-group">
-    <div class="column2">
-    </div>
-    <div class="column">
-
-      <form>
-        <h2>&emsp;Bitácora de Cambios</h2>
-        <table class="table table-hover">
-          <thead>
-            <tr>
-              <th scope="col">Nombre</th>
-              <th scope="col">Tipo</th>
-              <th scope="col">Valor</th>
-              <th scope="col">Ámbito</th>
-              <th scope="col">Nota</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for simbolo in simbolos2 %}
-
-            <tr>
-              <td>{{simbolo.nombre}}</td>
-              <td>{{simbolo.tipo}}</td>
-              <td>{{simbolo.valor}}</td>
-              <td>{{simbolo.ambito}}</td>
-              <td>{{simbolo.nota}}</td>
-            </tr>
-
-            {% endfor %}
-
-          </tbody>
-        </table>
-      </form>
-    </div>
-    <div class="column2">
-    </div>
-    <div class="column">
-
       <form>
         <h2>&emsp;Reporte de Errores</h2>
         <table class="table table-hover">
@@ -248,6 +176,56 @@
 
           </tbody>
         </table>
+      </form>      
+    </div>
+  </div>
+
+</br></br>
+</br></br>
+</br></br></br>
+</br></br>
+</br></br>
+</br></br>
+</br></br></br>
+</br></br></br></br></br>
+</br></br>
+
+  <div class="row form-group">
+    <div class="column2">
+    </div>
+    
+    <div class="column">
+
+      <form>
+        <h2>&emsp;Reporte de Optimización</h2>
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th scope="col">Tipo</th>
+              <th scope="col">Regla</th>
+              <th scope="col">Expresión Original</th>
+              <th scope="col">Nueva Expresión</th>
+              <th scope="col">Fila</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {% for opt in optimizacion %}
+
+            <tr>
+              <td>{{opt.tipo}}</td>
+              <td>{{opt.regla}}</td>
+              <td>{{opt.exp_original}}</td>
+              <td>{{opt.exp_nueva}}</td>
+              <td>{{opt.fila}}</td>
+            </tr>
+
+            {% endfor %}
+
+          </tbody>
+
+        </table>
+
       </form>
 
     </div>

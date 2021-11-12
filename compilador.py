@@ -61,6 +61,7 @@ comparandocadenas = False
 gotos = []
 inicioloop = ""
 findeloop = ""
+varglobal = ""
 
 def compilando(texto):
     # seteando todo como debe ser :v
@@ -496,7 +497,7 @@ def intScope(instr: Scope, tablaSimbolos : cst.TablaSimbolos):
             meteraTraduccion(x)
             return ""         
     except Exception as ee:
-        errorEquis('Asignación', 'algo x pasó :c')
+        errorEquis('Asignación', 'algo x pasó :c' + ee)
     
     # SIN CAMBIOS A LA IQUIERDA
     valor = resolverNumerica(asignacion.valor, tablaSimbolos)    
@@ -872,14 +873,44 @@ def intContinue(instr: SBreak, tablaSimbolos: cst.TablaSimbolos):
 def intFFor(instr: FFor, tablaSimbolos : cst.TablaSimbolos):
 
     print('for')
-
     global pilaentornos
+    global contavars
     pilaentornos.append('for')
 
     print('Instrucciones', instr.instrucciones)
     print('id =', instr.var)
-    #rangoraw = resolverNumerica(instr.rango, tablaSimbolos)
-    print('rangoraw ', instr.rango)
+    rango = resolverNumerica(instr.rango, tablaSimbolos)
+    print('rangoraw2 ', rango)
+
+    temp2 = crearTemporal()
+    temp3 = crearTemporal()
+    temp4 = crearTemporal()
+    temp6 = crearTemporal()
+    temp5 = crearTemporal()
+    
+
+    saltoinicial = crearSalto()
+    saltofinal = crearSalto()
+
+    x = metercomentario("Mi Rango:")
+    x += temp2 + siwal + getHeap(verificarT(rango)) + fincomando #tamaño del coso si es array
+    x += temp3 + siwal + "0" + fincomando #la iteración empieza en el 0
+
+    x += temp4 + siwal + getP("+"+ str(contavars)) #geteando espacio vacío en stack
+    x += getStack(temp4) + siwal + temp3 + fincomando #actualizo el contador en stack
+
+    x += iniciarSalto(saltoinicial)
+    x += crearIf(temp3 + " == "+ temp2, saltofinal) #si el contador es iwal al tamaño del coso muerte
+
+
+    x += tempmasmas(temp3)
+    x += getStack(temp4) + siwal + temp3 + fincomando 
+    x += crearIf(temp3 + " <= "+ temp2, saltoinicial)
+    x += iniciarSalto(saltofinal)
+
+
+
+    meteraTraduccion(x)
 
     
 
@@ -1256,22 +1287,28 @@ def resolverNumerica(Exp, tablaSimbolos: cst.TablaSimbolos):
             print(e)
             return errorEquis('Llamada a valor de arreglo', str(e))
 
+    # FORS
     elif isinstance(Exp, FForRangoNum):
         exp1 = resolverNumerica(Exp.term1, tablaSimbolos)
         exp2 = resolverNumerica(Exp.term2, tablaSimbolos) 
 
         if exp1 == None or exp2 == None:
-            return None
+            errorEquis('Rango de For', 'no es posible generar el rango')
+            return ""
 
         if tipoVariable(exp1) != 'Int64' and tipoVariable(exp2) != 'Int64':
-            return None
+            errorEquis('Rango de For', 'no es posible generar el rango')
+            return ""
 
         aux = []
         while exp1 <= exp2:
-            aux.append(exp1)
+            aux.append(OPNum(exp1))
             exp1 += 1
 
-        return ""
+        print(aux)
+        tempfinal = resolverNumerica(aux, tablaSimbolos)
+        
+        return tempfinal
     elif isinstance(Exp, LlamadaFuncion): 
         return ""   
     else: 

@@ -1,11 +1,21 @@
 from datetime import datetime
 
+
+class Optimizacion:
+    def __init__(self,  tipo, regla, exp_original, exp_nueva, fila) :
+        self.tipo = tipo
+        self.regla = regla
+        self.exp_original = exp_original
+        self.exp_nueva = exp_nueva
+        self.fila = fila
+
 # ----------------------------------- OBJ EXPORTACION ------------------------------
 #-----------------------------------------------------------------------------------
 
 class Exporte:
     listasemanticos = []
     listasegundos = []
+    reporteOptimizacion = []
     def __init__(self, traduccion, tabla_simbolos, tabla_errores, errores_lexicos, arbol):
         self.traduccion = traduccion
         self.tabla_simbolos = tabla_simbolos

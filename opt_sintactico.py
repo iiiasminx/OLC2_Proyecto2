@@ -49,18 +49,18 @@ def p_instruccion(t):
 
 def p_inicioSalto(t): 
     ''' INICIOSALTO : salto dospuntos '''
-    t[0] = t[1] + t[2]
+    t[0] = t[1] + t[2] 
     listaexp.append(exp.InicioSalto(t[1], t[0] ))
 
 def p_inicioGoto(t): 
     ''' INICIOGOTO : goto salto puntocoma '''
-    t[0] = t[1] + t[2] + t[3]
+    t[0] = t[1] + " " + t[2] + t[3]
     listaexp.append(exp.InicioGoto(t[2], t[0]))
 
 def p_crearIf(t): 
     ''' CREARIF : if parentesisa IZQ SIMBOLO IZQ parentesisc llavesa goto salto llavesc  '''
-    t[0] = t[1] + t[2] + t[3] + t[4] + t[5] + t[6] + t[7] + t[8] + t[9] + t[10]
-    listaexp.append(exp.InicioIf(exp.Comparacion(t[3], t[4], t[5], t[3] + t[4] + t[5]), t[8], t[0]))
+    t[0] = t[1] + t[2] + t[3] + t[4] + t[5] + t[6] + t[7] + t[8] + " " + t[9] + t[10]
+    listaexp.append(exp.InicioIf(exp.Comparacion(t[3], t[4], t[5], t[3] + t[4] + t[5]), t[9], t[0]))
 
 def p_asignacion(t):
     '''ASIGNACION : LADO igual LADO puntocoma'''
@@ -69,7 +69,7 @@ def p_asignacion(t):
 
 def p_impresion(t):
     ''' IMPRESION : fmt punto printf parentesisa TIPOCHAR coma ICHAR parentesisc puntocoma'''
-    t[0] = t[1] + t[2] + t[3] + t[4] + t[5] + t[6] + t[7] + t[8] + t[9]
+    t[0] = t[1] + t[2] + t[3] + t[4] + "\"" + t[5] + "\"" + t[6] + t[7] + t[8] + t[9]
     listaexp.append(exp.Impresion(t[5], t[7], t[0]))
 
 def p_llamadametodo(t):
@@ -80,6 +80,7 @@ def p_llamadametodo(t):
 def p_metodo(t):
     '''METODO : func id parentesisa parentesisc llavesa INSTRUCCIONES return puntocoma llavesc'''
     global listaexp
+    global listafinal
     x = exp.Metodo(t[2], listaexp)
     listafinal.append(x)
     listaexp = []
@@ -87,6 +88,7 @@ def p_metodo(t):
 def p_metodo2(t):
     '''METODO : func main parentesisa parentesisc llavesa INSTRUCCIONES llavesc '''
     global listaexp
+    global listafinal
     x = exp.Metodo(t[2], listaexp)
     listafinal.append(x)
     listaexp= []
@@ -170,12 +172,15 @@ def p_neg(t):
 #-----------------------------------------------------------------------------------------------------
 def opt_sintactico(texto):
 
+    global listafinal
+    listafinal = []
+
     fighting(texto)
     parser = yacc.yacc()
     result = parser.parse(texto)
     print(result)
     print('--------------------------------------------------------------------------------------------')
-    global listafinal
+    
     print(listafinal)
     
     return listafinal
