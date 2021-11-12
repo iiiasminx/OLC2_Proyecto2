@@ -47,6 +47,7 @@ yaprintstring = False
 yacomparestrings = False
 yalowercase = False
 yauppercase = False
+yagenerarArray = False
 
 # vars extra
 usandovars = 0 # las vars de la instruccion
@@ -401,6 +402,139 @@ def intImpresionLN(instr, tablaSimbolos : cst.TablaSimbolos):
 # region declaracion -- revisada
 
 def intDeclaracion(instr:Asignacion, tablaSimbolos : cst.TablaSimbolos):
+    print('Asignando en declaración')
+    print(instr.nombre)
+    print(instr.valor)
+
+    global saltofalse
+    global saltotrue
+    global saltorest
+
+    global pilaentornos
+    global funcionusada
+    ambito = pilaentornos[-1]
+
+    valor = resolverNumerica(instr.valor, tablaSimbolos)
+    aux = siExiste(instr.nombre, tablaSimbolos)
+    
+    tipo = "Undefined"
+    if funcionusada == 0:
+        tipo = "Numeric"
+    elif funcionusada == 1:
+        tipo = "String"
+    elif funcionusada == 2:
+        tipo = "Bool"
+    elif funcionusada == 3:
+        tipo = "Nil"
+    elif funcionusada == 4:
+        tipo = "Array"
+    elif funcionusada == 5:
+        tipo = "ArrayComponent"
+ 
+    # si ya existe el coso en la ts
+    if aux:
+        print('actualizando')
+        if aux.tipo == 'Function':
+            errorEquis('Asignación', 'ya existe una funcion con este nombre')
+            return ""
+
+        # actualizo el valor      
+
+        simbolo = cst.NodoSimbolo(instr.nombre, tipo, ambito, valor)
+        simbolo.nota = 'Actualización'
+        tablaSimbolos.actualizar(simbolo)
+        #borrardeTabla(aux)
+        #añadiraTabla(simbolo)
+
+        x = ""
+        posicion = aux.posicion
+        if tipo == "Int64" or tipo == "Float64" or funcionusada == 0:
+            x += getStack(posicion) + siwal + verificarT(valor) + fincomando        
+        elif tipo == "Bool" or funcionusada == 2 :
+            #print('-->', valor)
+            if valor == "False" or valor == "false" or valor == False:
+                valor = 0
+            else:
+                valor = 1
+            x += getStack(posicion) + siwal + str(valor) + fincomando  
+        elif tipo == "String" or funcionusada == 1 :
+            posenH = crearTemporal()
+            x += posenH + siwal + getH("")
+            
+            for i in valor:
+                ascii = ord(i)
+                x += getHeap("H") + siwal + str(ascii) + fincomando
+                x += aumentarH(1)
+
+            x += getHeap("H") + siwal + "-1" + fincomando
+            x += aumentarH(1)
+
+            x += getStack(posicion) + siwal + posenH + fincomando
+        elif tipo == "None" or tipo == None or funcionusada == 3:
+            x += getStack(posicion) + siwal + "0" + fincomando
+        elif tipo == "Array" or tipo == None or funcionusada == 4:
+            x += getStack(posicion) + siwal + verificarT(valor) + fincomando
+
+        meteraTraduccion(x)
+        return getStack(posicion)
+
+    # si el valor es nuevo  
+    else:
+        print('nuevo')
+        # creo una nueva variable
+        posicion = crearposicion()
+
+        simbolo = cst.NodoSimbolo(instr.nombre, tipo, ambito, posicion)
+        tablaSimbolos.agregar(simbolo)
+        #añadiraTabla(simbolo)
+
+        #acá meto mi c3d
+
+        x = ""
+        if tipo == "Int64" or tipo == "Float64" or funcionusada == 0:
+            x += getStack(posicion) + siwal + verificarT(valor) + fincomando        
+        elif tipo == "Bool" or funcionusada == 2 :
+            print('val-->', valor)
+            if valor == "False" or valor == "false" or valor == False:
+                valor = 0
+            elif valor == "True" or valor == "true" or valor == True:
+                valor = 1
+            else: 
+                valor = verificarT(valor)
+            
+            if saltofalse == "" or saltotrue == "":
+                saltotrue = crearSalto()
+                saltofalse = crearSalto()
+                saltorest = crearSalto()
+            
+            x += metercomentario('inicio -- Para que funcione T.T')
+            x += crearIf("0 != 0", saltofalse)
+            x += iniciarGoto(saltotrue)
+            x += metercomentario('fin -- Para que funcione T.T')
+
+            x += iniciarSalto(saltotrue)
+            x += getStack(posicion) + siwal + str(valor) + fincomando  
+            x += iniciarGoto(saltorest)
+            x += iniciarSalto(saltofalse)
+            x += getStack(posicion) + siwal + "0" + fincomando
+            x += iniciarSalto(saltorest)
+        elif tipo == "String" or funcionusada == 1 :
+            x += getStack(posicion) + siwal + verificarT(valor) + fincomando
+        elif tipo == "None" or tipo == None or funcionusada == 3:
+            x += getStack(posicion) + siwal + "0" + fincomando
+        elif tipo == "Array"  or funcionusada == 4:
+            x += getStack(posicion) + siwal + verificarT(valor) + fincomando
+        elif tipo == "ArrayComponent"  or funcionusada == 5:
+            tempaux = crearTemporal()
+            x += tempaux + siwal + getHeap(verificarT(valor)) + fincomando
+            x += getStack(posicion) + siwal + tempaux + fincomando
+
+        meteraTraduccion(x)
+        global contavars
+        contavars = contavars +1
+        instruccionesencero()
+        return getStack(posicion)
+
     return ""
 
 def intScope(instr: Scope, tablaSimbolos : cst.TablaSimbolos):
@@ -875,41 +1009,74 @@ def intFFor(instr: FFor, tablaSimbolos : cst.TablaSimbolos):
     print('for')
     global pilaentornos
     global contavars
+    global funcionusada
+    global ts_global
+    ts_local = ts_global
     pilaentornos.append('for')
 
     print('Instrucciones', instr.instrucciones)
     print('id =', instr.var)
-    rango = resolverNumerica(instr.rango, tablaSimbolos)
-    print('rangoraw2 ', rango)
+    print('rangoraw21', instr.rango)
+    #temp2 = intDeclaracion(Asignacion("temp", instr.rango), tablaSimbolos)
+    # temp2 es un temporal que me dice donde está mi rango
 
-    temp2 = crearTemporal()
+    temp2 = resolverNumerica(instr.rango, tablaSimbolos)
+    # el rango puede ser un array, o un id, el temp2 me dice cual es el tamaño del coso
+    print('rangoraw2 ', temp2, ' funcionusada ', funcionusada)
+
     temp3 = crearTemporal()
     temp4 = crearTemporal()
-    temp6 = crearTemporal()
     temp5 = crearTemporal()
+    temp6 = crearTemporal()
+    temp7 = crearTemporal()
+    temp9 = crearTemporal()
+    temp8 = crearTemporal()    
+    temp10 = crearTemporal()
     
 
     saltoinicial = crearSalto()
+    saltointermedio = crearSalto()
     saltofinal = crearSalto()
 
-    x = metercomentario("Mi Rango:")
-    x += temp2 + siwal + getHeap(verificarT(rango)) + fincomando #tamaño del coso si es array
-    x += temp3 + siwal + "0" + fincomando #la iteración empieza en el 0
+    x = metercomentario('FOR')
+    x += metercomentario("Mi Rango:")
 
-    x += temp4 + siwal + getP("+"+ str(contavars)) #geteando espacio vacío en stack
-    x += getStack(temp4) + siwal + temp3 + fincomando #actualizo el contador en stack
+    x += temp3 + siwal + getHeap(verificarT(temp2)) + fincomando #tamaño del coso si es array
+
+    x += temp4 + siwal + "0" + fincomando #la iteración empieza en el 0
+    x += temp5 + siwal + aumentartemp(temp4, verificarT(temp2)) # posicion del arr en heap
+    x += tempmasmas(temp5) # donde empiezan los valores del arr
+    meteraTraduccion(x)
+
+    #acá declaro la variable?
+    x = metercomentario("declarando la variable del for")
+    meteraTraduccion(x)
+    posaux = intDeclaracion(Asignacion(instr.var, OPNum(0)), tablaSimbolos)    
+    # declaro la variable vacía
+
+    x = temp6 + siwal + getHeap(verificarT(temp5)) + fincomando #geteo el primer valor del arr
+    #x += temp7 + siwal + getP("+" + str(contavars)) #un lugar vació en stack
+    #x += getStack(temp7) + siwal + verificarT(temp6) + fincomando# el lugar vacio en el stack es el primer del arr
+    x += posaux + siwal + verificarT(temp6) + fincomando# el lugar vacio en el stack es el primer del arr
+
 
     x += iniciarSalto(saltoinicial)
-    x += crearIf(temp3 + " == "+ temp2, saltofinal) #si el contador es iwal al tamaño del coso muerte
+    x += crearIf(temp4 + " == "+ temp3, saltofinal) #si el contador es iwal al tamaño del coso muerte
 
+    x += temp9 + siwal + getP("+" + str(contavars)) #el lugar donde está guardado el primero del arr
+    meteraTraduccion(x)
 
-    x += tempmasmas(temp3)
-    x += getStack(temp4) + siwal + temp3 + fincomando 
-    x += crearIf(temp3 + " <= "+ temp2, saltoinicial)
+    procesarInstrucciones(instr.instrucciones, ts_local)
+
+    x = metercomentario('después de las instruccions')
+    #x += iniciarSalto(saltointermedio)
+    x += tempmasmas(temp4) # aumento en la iteración
+    x += tempmasmas(temp5) # agarro el siguiente del array
+    x += temp6 + siwal + getHeap(temp5) + fincomando # agarro el siguiente del arrx2
+    x += posaux + siwal + temp6 + fincomando # el lugar vacio en el stack es el .. del arr
+    x += iniciarGoto(saltoinicial)
+
     x += iniciarSalto(saltofinal)
-
-
-
     meteraTraduccion(x)
 
     
@@ -1292,23 +1459,43 @@ def resolverNumerica(Exp, tablaSimbolos: cst.TablaSimbolos):
         exp1 = resolverNumerica(Exp.term1, tablaSimbolos)
         exp2 = resolverNumerica(Exp.term2, tablaSimbolos) 
 
-        if exp1 == None or exp2 == None:
-            errorEquis('Rango de For', 'no es posible generar el rango')
-            return ""
+        print('RANGOS: ', exp1, exp2)
 
-        if tipoVariable(exp1) != 'Int64' and tipoVariable(exp2) != 'Int64':
-            errorEquis('Rango de For', 'no es posible generar el rango')
-            return ""
+        tempmenor = crearTemporal()
+        tempmayor = crearTemporal()
+        temptamanio = crearTemporal()
+        temp0 = crearTemporal()
+        temp1 = crearTemporal()
+        saltoinicio = crearSalto()
+        saltofinal = crearSalto()
 
-        aux = []
-        while exp1 <= exp2:
-            aux.append(OPNum(exp1))
-            exp1 += 1
+        y = metercomentario("generando array")
+        y += tempmenor + siwal + verificarT(exp1) + fincomando#1
+        y += tempmayor + siwal + verificarT(exp2) + fincomando  #3   
+        y += temptamanio + siwal + "0" + fincomando      
+            
+        y += temp0 + siwal + getH("")
+        y += temp1 + siwal + aumentartemp(temp0, "1")
+        y += aumentarH(1) #guardo el lugar para el espacio
 
-        print(aux)
-        tempfinal = resolverNumerica(aux, tablaSimbolos)
-        
-        return tempfinal
+        y += iniciarSalto(saltoinicio)
+        y += crearIf(tempmenor + " > " + tempmayor, saltofinal)
+
+        y += getHeap(temp1) + siwal + tempmenor + fincomando
+        y += aumentarH(1)
+        y += temp1 + siwal + aumentartemp(temp1, "1")        
+
+        y += tempmenor + siwal + aumentartemp(tempmenor, "1")
+        y += temptamanio + siwal + aumentartemp(temptamanio, "1")
+        y += iniciarGoto(saltoinicio)
+        y += iniciarSalto(saltofinal)
+
+
+        y += getHeap(temp0) + siwal + temptamanio + fincomando # este es el tamaño
+
+        meteraTraduccion(y)
+        return temp0
+
     elif isinstance(Exp, LlamadaFuncion): 
         return ""   
     else: 
