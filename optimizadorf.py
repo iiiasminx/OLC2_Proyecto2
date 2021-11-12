@@ -34,6 +34,7 @@ def optimizar(texto: str):
     global cadenaOptimizada
     global asignacionesPrevias
     global nombreMetodo
+    global ultimaAsignacion
     global textoInicial
 
     textoOptimizado = ""
@@ -93,8 +94,10 @@ def iniciarOptimizacion(listametodos):
             nuevasInstrucciones = []
             nuevasInstrucciones1 = reglas2_3(metodo.lista)
             nuevasInstrucciones2 = reglas6_7_8(nuevasInstrucciones1)
+            nuevasInstrucciones3 = regla5(nuevasInstrucciones2)
+            nuevasInstrucciones4 = reglas4_5(nuevasInstrucciones3)
             # acá meto las reglas por las que pasan los cositos
-            nuevasInstrucciones = nuevasInstrucciones2
+            nuevasInstrucciones = nuevasInstrucciones4
             for instruccion in nuevasInstrucciones:
                 try:
                     cadenaAuxiliar += instruccion.txt + "\n"
@@ -108,6 +111,96 @@ def iniciarOptimizacion(listametodos):
             cadenaAuxiliar = ""
       
     return cadenafinal
+
+def reglas4_5(instrucciones = []):
+    global reporteOptimizacion
+
+    print('REGLA 4_5')
+    contador = 0
+    for miinstruccion in instrucciones:
+
+        inicial = miinstruccion.txt
+        if isinstance(miinstruccion, sent.InicioGoto):
+            print('GOTO YA')
+            indexSalto = 0
+            encontrado = False
+            for buscandoSalto in instrucciones:
+                if isinstance(buscandoSalto, sent.InicioSalto):
+                    # viendo si el salto coincide con el goto
+                    #print(miinstruccion.salto, " , ", buscandoSalto.salto)
+                    if miinstruccion.salto == buscandoSalto.salto:
+                        #print('REGLA 4 1/2 -- index: ', indexSalto)
+                        encontrado = True
+                        break
+                
+                indexSalto += 1
+
+            if isinstance(instrucciones[indexSalto +1], sent.InicioGoto) and encontrado:
+                #print('REGLA 4 2/2')
+                instrucciones[contador] = instrucciones[indexSalto +1]
+                regla = "4"
+                reporteOptimizacion.append(cst.Optimizacion("Mirilla", regla, inicial, instrucciones[contador].txt, str(contador)))         
+
+        elif isinstance(miinstruccion, sent.InicioIf):
+            print('IF YA')
+            indexSalto = 0
+            encontrado = False
+            for buscandoSalto in instrucciones:
+                if isinstance(buscandoSalto, sent.InicioSalto):
+                    # viendo si el salto coincide con el goto
+                    #print(miinstruccion.salto, " , ", buscandoSalto.salto, "???")
+                    if miinstruccion.salto == buscandoSalto.salto:
+                        print('REGLA 4 1/2 -- index: ', indexSalto)
+                        encontrado = True
+                        break
+                
+                indexSalto += 1
+
+            if isinstance(instrucciones[indexSalto +1], sent.InicioGoto) and encontrado:
+                print('REGLA 4 2/2')
+                instrucciones[contador].txt = "if(" + miinstruccion.comparacion.txt + ") {" + instrucciones[indexSalto +1].txt + "}"
+                regla = "5"
+                reporteOptimizacion.append(cst.Optimizacion("Mirilla", regla, inicial, instrucciones[contador].txt, str(contador)))         
+
+
+        contador += 1
+    
+    return instrucciones
+
+
+def regla5(instrucciones = []):
+    global reporteOptimizacion
+    global asignacionesPrevias
+
+    print('REGLA 1')
+    contador = 0
+    nuevasinstrucciones = instrucciones
+    print('al inicio', nuevasInstrucciones)
+    print('comparado con', instrucciones)
+
+    for miinstruccion in instrucciones:
+
+        inicial = miinstruccion.txt
+        if isinstance(miinstruccion, sent.Asignacion):
+            print('ASIGNACION')
+            regla = "1"
+            print('previas', len(asignacionesPrevias))
+            for asignacion in asignacionesPrevias:
+                if asignacion.derecha == miinstruccion.izquierda and asignacion.izquierda == miinstruccion.derecha:
+                    print('MATCH PARA ELIMINAR')
+                    instrucciones[contador] = sent.Eliminado("")
+                    reporteOptimizacion.append(cst.Optimizacion("Mirilla", regla, inicial, "cadena eliminada", str(contador)))
+                    contador += 1
+                    continue
+
+            asignacionesPrevias.append(miinstruccion)
+        elif isinstance(miinstruccion, sent.InicioSalto):
+            asignacionesPrevias = []
+
+        contador += 1
+
+    return instrucciones      
+
 
 # recibe una lista, mira las instrucciones, devuelve una lista
 def reglas6_7_8(instrucciones = []):

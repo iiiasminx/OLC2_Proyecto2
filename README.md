@@ -2,7 +2,7 @@
 ## Yásmin Elisa Monterroso Escobedo
 ## 201801385
 
-Aplicación ubicada en Heroku: https://olc2proyecto1.herokuapp.com/submit
+Aplicación ubicada en Heroku: https://olc2proyecto2.herokuapp.com/submit
 
 Aplicación desarrollada en Python con librerías:
 * gunicorn
