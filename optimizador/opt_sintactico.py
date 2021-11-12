@@ -1,5 +1,7 @@
 import ply.yacc as yacc
-from opt_lexico import fighting, tokens
+from optimizador.opt_lexico import fighting, tokens
+#import optimizador.opt_lexico 
+#from opt_lexico import fighting, tokens
 from sys import stdin
 
 from objetos import NodoError, Exporte
@@ -174,7 +176,7 @@ def opt_sintactico(texto):
 
     global listafinal
     listafinal = []
-
+    #optimizador.opt_lexico.fighting(texto)
     fighting(texto)
     parser = yacc.yacc()
     result = parser.parse(texto)
@@ -209,4 +211,4 @@ stack[int(0)] = 1;
 
 stack[int(1)] = 10;
 }'''
-#fighting2(mitexto)
+#opt_sintactico(mitexto)

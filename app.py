@@ -4,7 +4,7 @@ import json
 from a_lexico import fighting
 from a_sintactico import fighting2
 from compilador  import compilando
-from optimizador import optimizar
+from optimizadorf import optimizar
 #from interprete import fightingfinal
 
 app = Flask(__name__, static_url_path='')
