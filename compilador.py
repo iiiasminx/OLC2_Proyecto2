@@ -168,11 +168,13 @@ def procesarInstrucciones(ast, tablaSimbolos : cst.TablaSimbolos):
         elif isinstance(instruccion, SContinue): intContinue(instruccion, tablaSimbolos)
         elif isinstance(instruccion, FFor): intFFor(instruccion, tablaSimbolos)
 
-        print(type(DefFuncion))
-        # elif isinstance(instruccion, DefFuncion): intDefFuncion(instruccion, tablaSimbolos)
-        #elif isinstance(instruccion, DefFuncParam): intDefFuncParam(instruccion, tablaSimbolos)
-        #elif isinstance(instruccion, FuncParams): intDefFuncParam(instruccion, tablaSimbolos)
-        #elif isinstance(instruccion, LlamadaFuncion): intLlamadaFuncion(instruccion, tablaSimbolos)
+        #print(type(DefFuncion))        
+        elif isinstance(instruccion, DefFuncion): intDefFuncion(instruccion, tablaSimbolos)
+        elif isinstance(instruccion, DefFuncParam): intDefFuncParam(instruccion, tablaSimbolos)
+        elif isinstance(instruccion, FuncParams): intDefFuncParam(instruccion, tablaSimbolos)
+        elif isinstance(instruccion, LlamadaFuncion): intLlamadaFuncion(instruccion, tablaSimbolos)
+        else:
+            print('TIPO -->', type(instruccion))
 
 
 
@@ -188,7 +190,7 @@ def intDefFuncParam(instr:DefFuncParam, tablaSimbolos : cst.TablaSimbolos):
     print('PARAMS DE DEFINICIÓN')
     pass
 
-def FuncParams(instr:FuncParams, tablaSimbolos : cst.TablaSimbolos):
+def intDefFuncParams(instr:FuncParams, tablaSimbolos : cst.TablaSimbolos):
     print('PARAMS DE UNA LLAMADA')
     pass
 
@@ -1068,8 +1070,11 @@ def intFFor(instr: FFor, tablaSimbolos : cst.TablaSimbolos):
 
     x += temp3 + siwal + getHeap(verificarT(temp2)) + fincomando #tamaño del coso si es array
 
-    x += temp4 + siwal + "1" + fincomando #la iteración empieza en el 0
+    x += temp4 + siwal + "0" + fincomando #la iteración empieza en el 0
+
+    #x += tempmasmas(temp2)
     x += temp5 + siwal + aumentartemp(temp4, verificarT(temp2)) # posicion del arr en heap
+
     #x += tempmasmas(temp5) # donde empiezan los valores del arr
     meteraTraduccion(x)
 
@@ -1078,8 +1083,8 @@ def intFFor(instr: FFor, tablaSimbolos : cst.TablaSimbolos):
     meteraTraduccion(x)
     posaux = intDeclaracion(Asignacion(instr.var, OPNum(0)), tablaSimbolos)    
     # declaro la variable vacía
-
-    x = temp6 + siwal + getHeap(verificarT(temp5)) + fincomando #geteo el primer valor del arr
+    x = tempmasmas(temp5)
+    x += temp6 + siwal + getHeap(verificarT(temp5)) + fincomando #geteo el primer valor del arr
     #x += temp7 + siwal + getP("+" + str(contavars)) #un lugar vació en stack
     #x += getStack(temp7) + siwal + verificarT(temp6) + fincomando# el lugar vacio en el stack es el primer del arr
     x += posaux + siwal + verificarT(temp6) + fincomando# el lugar vacio en el stack es el primer del arr
