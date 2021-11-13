@@ -132,6 +132,7 @@ def compilando(texto):
     traduccion += "}"  
 
     trad = checarLabelsNoUsadas(traduccion)
+    trad = trad.replace('None', '0')
 
     paquete.traduccion = trad  
     paquete.errores_lexicos =lexicos
@@ -213,6 +214,24 @@ def intDefFuncion(instr:DefFuncion, tablaSimbolos : cst.TablaSimbolos):
     if numeroparams == 0:
         procesarInstrucciones(instr.instrucciones, tablaSimbolos)
 
+    else:
+        try:
+            contador = 1
+            for param in range(numeroparams):
+                temp = crearTemporal()
+                temp2 = crearTemporal()
+                x = temp + siwal + getP("+" + str(contador)) #posicion del coso
+                posaux = intDeclaracion(Asignacion(instr.params[contador-1], OPNum(0)), tablaSimbolos)
+                x += verificarT(posaux) + siwal + getStack(temp) + fincomando# el lugar vacio en el stack es el primer del arr
+                
+                meteraTraduccion(x)
+                contador += 1
+
+            procesarInstrucciones(instr.instrucciones, tablaSimbolos)
+        except:
+            errorEquis('Parámetros de función', 'algo pasó :c')
+            return
+
     functemporal += "\nreturn;\n"
     meterfuncion(nombre, functemporal)
     pilafunciones.append([nombre, numeroparams])
@@ -234,6 +253,8 @@ def intLlamadaFuncion(instr:LlamadaFuncion, tablaSimbolos : cst.TablaSimbolos):
     print(instr.params)
     numparams = len(instr.params)
     resultado = crearTemporal()
+    global funcionusada
+    global contavars
 
     try:
         if isinstance( instr.params[0], OPNothing):
@@ -249,6 +270,24 @@ def intLlamadaFuncion(instr:LlamadaFuncion, tablaSimbolos : cst.TablaSimbolos):
         x += resultado + siwal + getStack("P") + fincomando
         x += disminuirP(contavars)
         meteraTraduccion(x)
+
+    elif numparams == 1:
+        x = metercomentario("iniciando función")
+        #t6 = stack[(int)1];
+        #t7 = P+3;
+        #stack[(int)t7] = t6;
+        print('RESOLVIENDO', instr.params[0])
+        res = resolverNumerica(instr.params[0], tablaSimbolos)
+        tempex = crearTemporal()
+        x += tempex + siwal + getP("+" + str(contavars+1))
+        x += getStack(tempex) + siwal + verificarT(res) + fincomando
+
+        x += aumentarP(contavars)
+        x += instr.funcion + "()" + fincomando        
+        x += resultado + siwal + getStack("P") + fincomando
+        x += disminuirP(contavars)
+        meteraTraduccion(x)
+
 
     return resultado
     
