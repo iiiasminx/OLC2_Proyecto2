@@ -48,6 +48,7 @@ yacomparestrings = False
 yalowercase = False
 yauppercase = False
 yagenerarArray = False
+haciendoFunc = False
 
 # vars extra
 usandovars = 0 # las vars de la instruccion
@@ -63,6 +64,8 @@ gotos = []
 inicioloop = ""
 findeloop = ""
 varglobal = ""
+functemporal = ""
+pilafunciones = []
 
 def compilando(texto):
     # seteando todo como debe ser :v
@@ -183,8 +186,39 @@ def procesarInstrucciones(ast, tablaSimbolos : cst.TablaSimbolos):
 # -------------------------------------------------------------------------
 
 def intDefFuncion(instr:DefFuncion, tablaSimbolos : cst.TablaSimbolos):
+    global functemporal
+    global haciendoFunc 
+    global pilafunciones
+    haciendoFunc = True
     print('DEFINICION DE UNA FUNCIÓN')
-    pass
+    nombre = instr.nombre
+    print(instr.params)
+    numeroparams = len(instr.params)
+
+    try:
+        if numeroparams == 1:
+            print('SOLO HAY UNO')
+            primero = instr.params[0]
+            if isinstance(primero, DefFuncParam):
+                print(primero.param, " ", primero.tipo)
+                if isinstance(primero.param, OPNothing):
+                    numeroparams = 0
+                    print('NO HAY PARAMS')                
+    except:
+        errorEquis('Parámetros de función', 'algo pasó :c')
+        return
+    print('numero params = ', numeroparams)
+    y = ""
+
+    if numeroparams == 0:
+        procesarInstrucciones(instr.instrucciones, tablaSimbolos)
+
+    functemporal += "\nreturn;\n"
+    meterfuncion(nombre, functemporal)
+    pilafunciones.append([nombre, numeroparams])
+    haciendoFunc = False
+    functemporal = ""
+    
 
 def intDefFuncParam(instr:DefFuncParam, tablaSimbolos : cst.TablaSimbolos):
     print('PARAMS DE DEFINICIÓN')
@@ -196,7 +230,28 @@ def intDefFuncParams(instr:FuncParams, tablaSimbolos : cst.TablaSimbolos):
 
 def intLlamadaFuncion(instr:LlamadaFuncion, tablaSimbolos : cst.TablaSimbolos):
     print('LLAMADA')
-    pass
+    print(instr.funcion)
+    print(instr.params)
+    numparams = len(instr.params)
+    resultado = crearTemporal()
+
+    try:
+        if isinstance( instr.params[0], OPNothing):
+            numparams = 0
+    except:
+        errorEquis('Parámetros de función', 'algo pasó :c')
+        return
+
+    if numparams == 0:
+        x = metercomentario("iniciando función")
+        x += aumentarP(contavars)
+        x += instr.funcion + "()" + fincomando        
+        x += resultado + siwal + getStack("P") + fincomando
+        x += disminuirP(contavars)
+        meteraTraduccion(x)
+
+    return resultado
+    
 
 
 # -------------------------------------------------------------------------
@@ -644,6 +699,9 @@ def intScope(instr: Scope, tablaSimbolos : cst.TablaSimbolos):
                 x += iniciarSalto(saltofalse)
                 x += izquierda + siwal + "0" + fincomando
                 x += iniciarSalto(saltorest)
+                meteraTraduccion(x)
+                print('TERMINANDO DE ASIGNAR BOOL')
+                return
             elif tipo == "String" or funcionusada == 1 :
                 x += izquierda + siwal + verificarT(valor) + fincomando
             elif tipo == "None" or tipo == None or funcionusada == 3:
@@ -709,12 +767,40 @@ def intScope(instr: Scope, tablaSimbolos : cst.TablaSimbolos):
         if tipo == "Int64" or tipo == "Float64" or funcionusada == 0:
             x += getStack(posicion) + siwal + verificarT(valor) + fincomando        
         elif tipo == "Bool" or funcionusada == 2 :
-            #print('-->', valor)
-            if valor == "False" or valor == "false" or valor == False:
-                valor = 0
-            else:
-                valor = 1
-            x += getStack(posicion) + siwal + str(valor) + fincomando  
+            try:
+                print('val-->', valor)
+                if valor == "False" or valor == "false" or valor == False:
+                    valor = 0
+                elif valor == "True" or valor == "true" or valor == True:
+                    valor = 1
+                else: 
+                    valor = verificarT(valor)
+                
+                if saltofalse == "" or saltotrue == "":
+                    saltotrue = crearSalto()
+                    saltofalse = crearSalto()
+                    saltorest = crearSalto()
+                
+                x += metercomentario('inicio -- Para que funcione T.T')
+                x += crearIf("0 != 0", saltofalse)
+                x += iniciarGoto(saltotrue)
+                x += metercomentario('fin -- Para que funcione T.T')
+
+                x += iniciarSalto(saltotrue)
+                x += getStack(posicion) + siwal + str(valor) + fincomando  
+                x += iniciarGoto(saltorest)
+                x += iniciarSalto(saltofalse)
+                x += getStack(posicion) + siwal + "0" + fincomando
+                x += iniciarSalto(saltorest)
+            except:
+
+                print('-->', valor)
+                if valor == "False" or valor == "false" or valor == False:
+                    valor = 0
+                else:
+                    valor = 1
+                x += getStack(posicion) + siwal + str(valor) + fincomando
+            
         elif tipo == "String" or funcionusada == 1 :
             #posenH = crearTemporal()
             #x += posenH + siwal + getH("")
@@ -1095,6 +1181,8 @@ def intFFor(instr: FFor, tablaSimbolos : cst.TablaSimbolos):
 
     x += temp9 + siwal + getP("+" + str(contavars)) #el lugar donde está guardado el primero del arr
     meteraTraduccion(x)
+
+    x = metercomentario('antes de las instruccions')
 
     procesarInstrucciones(instr.instrucciones, ts_local)
 
@@ -1961,11 +2049,13 @@ def resolverBooleana(Exp, tablaSimbolos: cst.TablaSimbolos):
 
         #no se muestran
         if Exp.operador == LOGICA.AND : 
+            funcionusada = 2
             print('poping ', usandologica[-1], ' ', usandologica)
             usandologica.pop(-1)
             permiso = False
             return exp1 and exp2
         elif Exp.operador == LOGICA.OR : 
+            funcionusada = 2
             print('poping ', usandologica[-1], ' ', usandologica)
             usandologica.pop(-1)
             permiso = False
@@ -1974,6 +2064,7 @@ def resolverBooleana(Exp, tablaSimbolos: cst.TablaSimbolos):
 
         if Exp.operador == LOGICA.MAYORQUE :            
             x = ""
+            funcionusada = 2
             
             x += crearIf(verboolastring(exp1) + ">" + verboolastring(exp2), saltotrue)
             x += iniciarGoto(saltofalse)
@@ -1995,6 +2086,7 @@ def resolverBooleana(Exp, tablaSimbolos: cst.TablaSimbolos):
             return True
         elif Exp.operador == LOGICA.MENORQUE :
             x = ""
+            funcionusada = 2
 
             x += crearIf(verboolastring(exp1) + "<" + verboolastring(exp2), saltotrue)
             x += iniciarGoto(saltofalse)
@@ -2015,6 +2107,7 @@ def resolverBooleana(Exp, tablaSimbolos: cst.TablaSimbolos):
             return True
         elif Exp.operador == LOGICA.MAYORIWAL :
             x = ""
+            funcionusada = 2
 
             x += crearIf(verboolastring(exp1) + ">=" + verboolastring(exp2), saltotrue)
             x += iniciarGoto(saltofalse)
@@ -2036,6 +2129,7 @@ def resolverBooleana(Exp, tablaSimbolos: cst.TablaSimbolos):
             return True
         elif Exp.operador == LOGICA.MENORIWAL : 
             x = ""
+            funcionusada = 2
             x += crearIf(verboolastring(exp1) + "<=" + verboolastring(exp2), saltotrue)
             x += iniciarGoto(saltofalse)
             meteraTraduccion(x)
@@ -2056,6 +2150,7 @@ def resolverBooleana(Exp, tablaSimbolos: cst.TablaSimbolos):
             return True
         elif Exp.operador == LOGICA.IWAL : 
             x = ""
+            funcionusada = 2
 
             if comparandocadenas:
                 if not yacomparestrings:
@@ -2099,9 +2194,9 @@ def resolverBooleana(Exp, tablaSimbolos: cst.TablaSimbolos):
 
                 x += temp7 + siwal + getP("+" + str(contavars))
                 x += tempmasmas(temp7)
-                x += getStack(temp7) + siwal + exp1 + fincomando
+                x += getStack(temp7) + siwal + verificarT(exp1) + fincomando
                 x += tempmasmas(temp7)
-                x += getStack(temp7) + siwal + exp2 + fincomando
+                x += getStack(temp7) + siwal + verificarT(exp2) + fincomando
                 x += aumentarP(contavars)
                 x += "compareStrings()" + fincomando
                 x += temp8 + siwal + getStack("P") + fincomando
@@ -2134,6 +2229,7 @@ def resolverBooleana(Exp, tablaSimbolos: cst.TablaSimbolos):
             return exp1 == exp2
         elif Exp.operador == LOGICA.DISTINTO :
             x = ""
+            funcionusada = 2
             
             if comparandocadenas:
                 if not yacomparestrings:
@@ -2428,6 +2524,10 @@ def funcionesencero():
     inicioloop = ""
     global findeloop
     findeloop = ""
+    global haciendoFunc
+    haciendoFunc = False
+    global functemporal
+    functemporal = ""
 
 def instruccionesencero():
     global usandovars
@@ -2507,6 +2607,12 @@ def crearposicion():
 
 # TRADUCCION
 def meteraTraduccion(texto):
+    global haciendoFunc
+    global functemporal
+    if haciendoFunc:
+        functemporal += texto
+        functemporal += '\n'
+        return
     global traducciontemporal
     traducciontemporal += texto
     traducciontemporal += '\n'
