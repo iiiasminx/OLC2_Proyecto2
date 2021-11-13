@@ -168,8 +168,33 @@ def procesarInstrucciones(ast, tablaSimbolos : cst.TablaSimbolos):
         elif isinstance(instruccion, SContinue): intContinue(instruccion, tablaSimbolos)
         elif isinstance(instruccion, FFor): intFFor(instruccion, tablaSimbolos)
 
+        print(type(DefFuncion))
+        # elif isinstance(instruccion, DefFuncion): intDefFuncion(instruccion, tablaSimbolos)
+        #elif isinstance(instruccion, DefFuncParam): intDefFuncParam(instruccion, tablaSimbolos)
+        #elif isinstance(instruccion, FuncParams): intDefFuncParam(instruccion, tablaSimbolos)
+        #elif isinstance(instruccion, LlamadaFuncion): intLlamadaFuncion(instruccion, tablaSimbolos)
 
 
+
+# -------------------------------------------------------------------------
+# FUNCIONES ---------------------------------------------------------------
+# -------------------------------------------------------------------------
+
+def intDefFuncion(instr:DefFuncion, tablaSimbolos : cst.TablaSimbolos):
+    print('DEFINICION DE UNA FUNCIÓN')
+    pass
+
+def intDefFuncParam(instr:DefFuncParam, tablaSimbolos : cst.TablaSimbolos):
+    print('PARAMS DE DEFINICIÓN')
+    pass
+
+def FuncParams(instr:FuncParams, tablaSimbolos : cst.TablaSimbolos):
+    print('PARAMS DE UNA LLAMADA')
+    pass
+
+def intLlamadaFuncion(instr:LlamadaFuncion, tablaSimbolos : cst.TablaSimbolos):
+    print('LLAMADA')
+    pass
 
 
 # -------------------------------------------------------------------------
@@ -689,18 +714,18 @@ def intScope(instr: Scope, tablaSimbolos : cst.TablaSimbolos):
                 valor = 1
             x += getStack(posicion) + siwal + str(valor) + fincomando  
         elif tipo == "String" or funcionusada == 1 :
-            posenH = crearTemporal()
-            x += posenH + siwal + getH("")
+            #posenH = crearTemporal()
+            #x += posenH + siwal + getH("")
             
-            for i in valor:
-                ascii = ord(i)
-                x += getHeap("H") + siwal + str(ascii) + fincomando
-                x += aumentarH(1)
+            #for i in valor:
+            #    ascii = ord(i)
+            #    x += getHeap("H") + siwal + str(ascii) + fincomando
+            #    x += aumentarH(1)
 
-            x += getHeap("H") + siwal + "-1" + fincomando
-            x += aumentarH(1)
+            #x += getHeap("H") + siwal + "-1" + fincomando
+            #x += aumentarH(1)
 
-            x += getStack(posicion) + siwal + posenH + fincomando
+            x += getStack(posicion) + siwal + valor + fincomando
         elif tipo == "None" or tipo == None or funcionusada == 3:
             x += getStack(posicion) + siwal + "0" + fincomando
         elif tipo == "Array" or tipo == None or funcionusada == 4:
@@ -1043,9 +1068,9 @@ def intFFor(instr: FFor, tablaSimbolos : cst.TablaSimbolos):
 
     x += temp3 + siwal + getHeap(verificarT(temp2)) + fincomando #tamaño del coso si es array
 
-    x += temp4 + siwal + "0" + fincomando #la iteración empieza en el 0
+    x += temp4 + siwal + "1" + fincomando #la iteración empieza en el 0
     x += temp5 + siwal + aumentartemp(temp4, verificarT(temp2)) # posicion del arr en heap
-    x += tempmasmas(temp5) # donde empiezan los valores del arr
+    #x += tempmasmas(temp5) # donde empiezan los valores del arr
     meteraTraduccion(x)
 
     #acá declaro la variable?
@@ -2382,6 +2407,12 @@ def funcionesencero():
     yaconcatstring = False
     global yaprintstring
     yaprintstring = False
+    global yalowercase
+    yalowercase = False
+    global yauppercase
+    yauppercase = False
+    global yagenerarArray 
+    yagenerarArray = False
     global usandovars
     usandovars = 0
     global contavars
